@@ -1,0 +1,53 @@
+name:                slurm-utils
+version:             0.1.0.0
+github:              "nijibabulu/slurm-utils"
+license:             BSD3
+author:              "Bob Zimmermann"
+maintainer:          "robert.zimmermann@univie.ac.at"
+copyright:           "(c) Bob Zimmermann"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/nijibabulu/slurm-utils#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+
+library:
+  source-dirs: src
+
+executables:
+  tmp_rewrite:
+    main:                Main.hs
+    source-dirs:         tmp_rewrite
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - slurm-utils
+    - text
+    - parsec
+    - optparse-applicative
+    - filepath
+    - directory
+
+tests:
+  slurm-utils-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - slurm-utils
