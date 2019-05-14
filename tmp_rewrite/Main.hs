@@ -3,8 +3,7 @@
 module Main 
 where
 import           Control.Applicative ( liftA2, (<**>) )
-import           Control.Monad 
-import           Control.Monad.Zip
+import           Control.Monad
 import           Data.List ( groupBy, intercalate )
 import           Data.Maybe
 import           Data.Semigroup ( (<>) )
@@ -97,31 +96,6 @@ choicesReader xs = O.eitherReader $ checkInput xs
             | input `elem` xs = Right input 
             | otherwise = Left $ "Must choose one of " ++ (intercalate ", " xs)
 
-modes = ["lock", "test", "nolock"]
-modeHelp = "Running mode: \n\
-\    lock - include an flock on copy to the temporary directory.\n\
-\    nolock - copy to the temporary directory \n\
-\    test - create commands rewriting the filenames without copying."
-
-tmpOptions :: O.Parser TmpSettings
-tmpOptions = TmpSettings 
-    <$> O.option (choicesReader modes) 
-         ( O.long "mode" <> O.value "lock" <> O.help modeHelp ) 
-    <*> O.option O.auto 
-         ( O.long "wait" <> O.value 7200 <> O.showDefault 
-        <> O.help "How long to wait before giving up the lock")
-    <*> O.strOption 
-        ( O.long "tmploc" <> O.value "$TMPDIR" <> O.showDefault
-       <> O.help "Location of the temporary directory to copy to")
-    <*> O.strOption
-        ( O.long "cpcmd" <> O.value "cp -Lr" <> O.showDefault
-       <> O.help "Copy command to use")
-    <*> O.strOption
-        ( O.long "lockfile" <> O.value "LOCK" <> O.showDefault
-       <> O.help "Name of the lock file")
-    <*> O.argument (O.eitherReader parseCmd) 
-        ( O.metavar "TEMPLATE" )
-
 lockedCopy :: TmpSettings -> String -> String
 lockedCopy s c = case (mode s) of
     "lock" -> foldl (++) "" [ "set -e ; (flock -w "
@@ -141,7 +115,7 @@ rewriteToTmp s p =
 mkdirRewrite :: TmpSettings -> Maybe String
 mkdirRewrite s =
   let rawDirs = catMaybes $ map outputDirName $ cmdParts s
-    dirs = map (rewriteToTmp s) rawDirs
+      dirs = map (rewriteToTmp s) rawDirs
     in case dirs of
         [] -> Nothing
         otherwise -> Just $ "mkdir -p " ++ intercalate " " dirs
@@ -164,8 +138,8 @@ cmdRewrite s = Just $ foldl (++) "" $ map rewritePart $ cmdParts s
 cpBackRewrite :: TmpSettings -> Maybe String
 cpBackRewrite s =
   let outputs = catMaybes $ map outputPath $ cmdParts s
-    outputSources = map (rewriteToTmp s) outputs
-    outputDests = map takeDirectory outputs
+      outputSources = map (rewriteToTmp s) outputs
+      outputDests = map takeDirectory outputs
       cpBackCmd (src, dest) = intercalate " " [(cpcmd s), src, dest]
       cpBacks =
         intercalate " ; " $ map cpBackCmd $ zip outputSources outputDests
@@ -180,11 +154,11 @@ cpBackRewrite s =
 checkLocations :: TmpSettings -> IO ()
 checkLocations s = do
     let inputs = catMaybes $ map inputFileName $ cmdParts s
-  missingFiles <- filterNotM doesFileExist inputs
+    missingFiles <- filterNotM doesFileExist inputs
     fileErrors <- mapM (makeError "File does not exist:") missingFiles
     let dirs = catMaybes $ map outputDirName $ cmdParts s
     let dirDests = map takeDirectory dirs
-  missingDirs <- filterNotM doesDirectoryExist dirDests
+    missingDirs <- filterNotM doesDirectoryExist dirDests
     dirErrors <- mapM (makeError "Directory does not exist:") missingDirs
     let error = ((length missingFiles) + (length missingDirs) > 0)
     let errors = concatMap concat [fileErrors, dirErrors]
@@ -193,13 +167,12 @@ checkLocations s = do
         makeError prefix f = return (prefix ++ f ++ "\n") 
         reportError True e = error e
         reportError False _ = return ()
-    filterNotM p = filterM ((liftM not) . p)
+        filterNotM p = filterM ((liftM not) . p)
 
 paragraph :: String -> P.Doc
 paragraph = P.fillSep . map (P.text) . words
 
 modes = ["lock", "test", "nolock"]
-
 modeHelpDoc =
   P.hang 2 $
   P.vsep $
@@ -233,31 +206,26 @@ tmpOptions =
      O.help "Name of the lock file") <*>
   O.argument (O.eitherReader parseCmd) (O.metavar "(TEMPLATE|-)")
 
+progDescDoc = P.vsep $
+  [ paragraph ("Automatically wrap a command with copies to and" ++
+               "from a temporary directory and rewrite the " ++
+               "command to use files in the temporary directory. " ++
+               "Uses a formatting syntax of {INPUT:i} for input " ++
+               "file INPUT, {DIR:d} for output directory DIR (DIR " ++ 
+               "is created) and {OUTPUT:o} for output file OUTPUT." ++
+               "For example,")
+  , P.text ""
+  , P.text  "tmp_rewrite \"cat {infile1:i} {infile2:i} > {outfile:o}\""
+  , P.text ""
+  , P.text "set -e ; (flock -w 7200 200 ; hostname > LOCK-host ; cp -Lr infile1 infile2 $TMPDIR) 200> LOCK ; cat $TMPDIR/infile1 $TMPDIR/infile2 > $TMPDIR/outfile ; cp -Lr $TMPDIR/outfile ."
+  ]
 parserInfo :: O.ParserInfo TmpSettings
 parserInfo =
   O.info
     (tmpOptions <**> O.helper)
     (O.fullDesc <>
-     O.progDescDoc
-       (Just
-          (P.vsep
-             [ paragraph
-                    ("Automatically wrap a command with copies to and" ++
-                      "from a temporary directory and rewrite the " ++
-                      "command to use files in the temporary directory. " ++
-                      "Uses a formatting syntax of {INPUT:i} for input " ++
-                      "file INPUT, {DIR:d} for output directory DIR (DIR " ++ 
-                      "is created) and {OUTPUT:o} for output file OUTPUT." ++
-                      "For example,")
-                    , P.text ""
-             , P.text
-                 "tmp_rewrite \"cat {infile1:i} {infile2:i} > {outfile:o}\""
-                    , P.text ""
-             , P.text
-                 "set -e ; (flock -w 7200 200 ; hostname > LOCK-host ; cp -Lr infile1 infile2 $TMPDIR) 200> LOCK ; cat $TMPDIR/infile1 $TMPDIR/infile2 > $TMPDIR/outfile ; cp -Lr $TMPDIR/outfile ."
-             ])) <>
-     O.header
-       "tmp_rewrite - Rewrite a command to perform actions in temporary space")
+     O.progDescDoc (Just progDescDoc) <>
+     O.header "tmp_rewrite - Rewrite command(s) in temporary space")
 
 parserPrefs :: O.ParserPrefs
 parserPrefs = O.prefs O.showHelpOnEmpty
