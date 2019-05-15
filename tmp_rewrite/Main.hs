@@ -12,6 +12,7 @@ import qualified Options.Applicative as O
 import qualified Options.Applicative.Help.Pretty as P
 import           System.Directory
 import           System.FilePath.Posix
+import           System.IO ( stdin )
 import           Text.ParserCombinators.Parsec
 import           Text.Read ( readEither )
 
@@ -88,7 +89,7 @@ data TmpSettings = TmpSettings
     , cpcmd :: String
     , lockfile :: String
     , ignoreErrors :: Bool
-    , cmdParts :: [CmdPart]
+    , cmd :: String
   } deriving (Show)
 
 choicesReader xs = O.eitherReader $ checkInput xs
@@ -113,32 +114,32 @@ rewriteToTmp s p =
     "test" -> p
     otherwise -> (tmploc s) </> takeBaseName p
 
-mkdirRewrite :: TmpSettings -> Maybe String
-mkdirRewrite s =
-  let rawDirs = catMaybes $ map outputDirName $ cmdParts s
+mkdirRewrite :: TmpSettings -> [CmdPart] -> Maybe String
+mkdirRewrite s cmdParts =
+  let rawDirs = catMaybes $ map outputDirName $ cmdParts
       dirs = map (rewriteToTmp s) rawDirs
     in case dirs of
         [] -> Nothing
         otherwise -> Just $ "mkdir -p " ++ intercalate " " dirs
 
-cpRewrite :: TmpSettings -> Maybe String
-cpRewrite s =
-  let inputs = catMaybes $ map inputFileName $ cmdParts s
+cpRewrite :: TmpSettings -> [CmdPart] -> Maybe String
+cpRewrite s cmdParts =
+  let inputs = catMaybes $ map inputFileName $ cmdParts
       cpRewrite' [] _ = Nothing
       cpRewrite' _ "test" = Nothing
       cpRewrite' fs _ = Just $ lockedCopy s $ intercalate " " ([cpcmd s] ++ fs ++ [tmploc s])
    in cpRewrite' inputs (mode s)
 
-cmdRewrite :: TmpSettings -> Maybe String
-cmdRewrite s = Just $ foldl (++) "" $ map rewritePart $ cmdParts s
+cmdRewrite :: TmpSettings -> [CmdPart] -> Maybe String
+cmdRewrite s cmdParts = Just $ foldl (++) "" $ map rewritePart $ cmdParts
   where
     rewritePart part 
          | Just p <- rewriteableFileName part = (rewriteToTmp s p)
          | otherwise = rest part
 
-cpBackRewrite :: TmpSettings -> Maybe String
-cpBackRewrite s =
-  let outputs = catMaybes $ map outputPath $ cmdParts s
+cpBackRewrite :: TmpSettings -> [CmdPart] -> Maybe String
+cpBackRewrite s cmdParts =
+  let outputs = catMaybes $ map outputPath $ cmdParts
       outputSources = map (rewriteToTmp s) outputs
       outputDests = map takeDirectory outputs
       cpBackCmd (src, dest) = intercalate " " [(cpcmd s), src, dest]
@@ -157,16 +158,16 @@ reportErrors _ "" = return ()
 reportErrors False s = error $ "\n" ++ s ++ 
   "\nFix these errors or use --ignore-errors to suppress them\n"
 
-checkLocations :: TmpSettings -> IO ()
-checkLocations s = do
+checkLocations :: TmpSettings -> [CmdPart] -> IO ()
+checkLocations s cmdParts = do
   missingInputs <- filterNotM doesFileExist inputs
   inputErrors <- (liftM concat) $ mapM (makeError "File does not exist: ") missingInputs
   missingDirs <- filterNotM doesDirectoryExist dirDests
   dirErrors <- (liftM concat) $ mapM (makeError "Directory does not exist: ")  missingDirs
   reportErrors (ignoreErrors s) (inputErrors ++ dirErrors)
   where
-    inputs = catMaybes $ map inputFileName $ cmdParts s
-    dirs = catMaybes $ map outputDirName $ cmdParts s
+    inputs = catMaybes $ map inputFileName $ cmdParts
+    dirs = catMaybes $ map outputDirName $ cmdParts
     dirDests = map takeDirectory dirs 
     filterNotM p = filterM ((liftM not) . p)
     makeError prefix f = return (prefix ++ f ++ "\n") 
@@ -209,7 +210,7 @@ tmpOptions =
   O.switch 
     (O.long "ignore-errors" <> 
      O.help "Do not check for missing files before rewriting") <*>
-  O.argument (O.eitherReader parseCmd) (O.metavar "(TEMPLATE|-)")
+  O.strArgument (O.metavar "(TEMPLATE|-)")
 
 progDescDoc = P.vsep $
   [ paragraph ("Automatically wrap a command with copies to and" ++
@@ -235,16 +236,36 @@ parserInfo =
 parserPrefs :: O.ParserPrefs
 parserPrefs = O.prefs O.showHelpOnEmpty
 
-rewrite :: TmpSettings -> String 
-rewrite settings = intercalate " ; " $ 
-    catMaybes [ mkdirRewrite settings
-              , cpRewrite settings
-              , cmdRewrite settings
-              , cpBackRewrite settings
+rewriteCmdParts :: TmpSettings -> [CmdPart] -> String 
+rewriteCmdParts settings cmdParts = intercalate " ; " $ 
+    catMaybes $ map (\f -> f settings cmdParts) 
+              [ mkdirRewrite 
+              , cpRewrite 
+              , cmdRewrite 
+              , cpBackRewrite
               ]
+
+rewrite :: TmpSettings -> String -> IO String
+rewrite settings cmd = do 
+  parsedCmd <- (either error return) $ parseCmd cmd
+  checkLocations settings parsedCmd
+  return $ rewriteCmdParts settings parsedCmd
 
 main = do
   settings <- O.customExecParser parserPrefs parserInfo
-  checkLocations settings
-  putStrLn $ rewrite settings
+
+  case (cmd settings) of 
+    "-" -> do 
+      ls <- ((liftM lines) getContents)
+      out <- mapM (rewrite settings) ls
+      putStrLn $ intercalate "\n" out
+    otherwise -> do 
+      out <- rewrite settings (cmd settings)
+      putStrLn out
+  
+  -- case (cmd settings) of
+  --   "-" -> interact ((rewrite settings) . lines)
+  --   otherwise -> putStrLn $ rewrite settings (cmd settings)
+
+  -- putStrLn output
 
