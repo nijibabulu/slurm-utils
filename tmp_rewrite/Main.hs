@@ -4,7 +4,6 @@ module Main
 where
 import           Control.Applicative ( liftA2, (<**>) )
 import           Control.Monad
-import           Control.Monad.Trans.Writer.Strict
 import           Data.List ( groupBy, intercalate )
 import           Data.Maybe
 import           Data.Semigroup ( (<>) )
@@ -88,6 +87,7 @@ data TmpSettings = TmpSettings
     , tmploc :: String
     , cpcmd :: String
     , lockfile :: String
+    , ignoreErrors :: Bool
     , cmdParts :: [CmdPart]
   } deriving (Show)
 
@@ -151,53 +151,25 @@ cpBackRewrite s =
             [] -> Nothing
             otherwise -> Just $ cpBacks
 
-{-loggedMissing :: (FilePath -> IO Bool) -> String -> FilePath -> Int -> Writer [String] Int
-loggedMissing p l f n =
-  case p f of
-    False -> tell [ l ++ f ] >>= return (n + 1)
-    True -> return n--}
+reportErrors :: Bool -> String -> IO ()
+reportErrors True _ = return ()
+reportErrors _ "" = return ()
+reportErrors False s = error $ "\n" ++ s ++ 
+  "\nFix these errors or use --ignore-errors to suppress them\n"
 
--- (\n -> 
---  liftM (logMissing n "Directory does not exist: ") (filterNotM doesDirectoryExist dirDests)
-
-logMissing :: Int -> String -> [String] -> Writer [String] Int
-logMissing n prefix (f:fs) = 
-  tell [prefix ++ f ++ "\n"] >> logMissing (n+1) prefix fs
-logMissing n _ [] = return n
-
-checkLocationsMonadic :: TmpSettings -> IO ()
-checkLocationsMonadic s = 
-  liftM (logMissing 0 "File does not exist: ") missingInputs >>= (\w -> 
-    liftM (logMissing ((fst . runWriter) w) "Directory does not exist: ") missingDirs) >>= (\w -> 
-      reportErrors (runWriter w))
-  where
-    inputs = catMaybes $ map inputFileName $ cmdParts s
-    missingInputs = filterNotM doesFileExist inputs
-    dirs = catMaybes $ map outputDirName $ cmdParts s
-    dirDests = map takeDirectory dirs 
-    missingDirs = filterNotM doesDirectoryExist dirDests
-    filterNotM p = filterM ((liftM not) . p)
-    reportErrors (0, _) = return ()
-    reportErrors (_, s) = error (concat s)
-
--- this could be much better (Writer monad?)
 checkLocations :: TmpSettings -> IO ()
 checkLocations s = do
-    let inputs = catMaybes $ map inputFileName $ cmdParts s
-    missingFiles <- filterNotM doesFileExist inputs
-    fileErrors <- mapM (makeError "File does not exist:") missingFiles
-    let dirs = catMaybes $ map outputDirName $ cmdParts s
-    let dirDests = map takeDirectory dirs
-    missingDirs <- filterNotM doesDirectoryExist dirDests
-    dirErrors <- mapM (makeError "Directory does not exist:") missingDirs
-    let error = ((length missingFiles) + (length missingDirs) > 0)
-    let errors = concatMap concat [fileErrors, dirErrors]
-    reportError error errors
-    where 
-        makeError prefix f = return (prefix ++ f ++ "\n") 
-        reportError True e = error e
-        reportError False _ = return ()
-        filterNotM p = filterM ((liftM not) . p)
+  missingInputs <- filterNotM doesFileExist inputs
+  inputErrors <- (liftM concat) $ mapM (makeError "File does not exist: ") missingInputs
+  missingDirs <- filterNotM doesDirectoryExist dirDests
+  dirErrors <- (liftM concat) $ mapM (makeError "Directory does not exist: ")  missingDirs
+  reportErrors (ignoreErrors s) (inputErrors ++ dirErrors)
+  where
+    inputs = catMaybes $ map inputFileName $ cmdParts s
+    dirs = catMaybes $ map outputDirName $ cmdParts s
+    dirDests = map takeDirectory dirs 
+    filterNotM p = filterM ((liftM not) . p)
+    makeError prefix f = return (prefix ++ f ++ "\n") 
 
 paragraph :: String -> P.Doc
 paragraph = P.fillSep . map (P.text) . words
@@ -209,9 +181,9 @@ modeHelpDoc =
   map
     paragraph
     [ "Running mode:"
-    , "lock - include an flock on copy to the temporary directory."
-    , "nolock - copy to the temporary directory."
     , "test - create commands rewriting the filenames without copying."
+    , "nolock - copy to the temporary directory."
+    , "lock - include an flock on copy to the temporary directory."
     ]
 
 tmpOptions :: O.Parser TmpSettings
@@ -234,6 +206,9 @@ tmpOptions =
   O.strOption
     (O.long "lockfile" <> O.value "LOCK" <> O.showDefault <>
      O.help "Name of the lock file") <*>
+  O.switch 
+    (O.long "ignore-errors" <> 
+     O.help "Do not check for missing files before rewriting") <*>
   O.argument (O.eitherReader parseCmd) (O.metavar "(TEMPLATE|-)")
 
 progDescDoc = P.vsep $
@@ -270,6 +245,6 @@ rewrite settings = intercalate " ; " $
 
 main = do
   settings <- O.customExecParser parserPrefs parserInfo
-  checkLocationsMonadic settings
+  checkLocations settings
   putStrLn $ rewrite settings
 

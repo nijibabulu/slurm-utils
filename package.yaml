@@ -40,7 +40,6 @@ executables:
     - optparse-applicative
     - filepath
     - directory
-    - transformers
 
 tests:
   slurm-utils-test:
