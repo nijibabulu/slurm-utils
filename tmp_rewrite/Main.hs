@@ -82,15 +82,7 @@ inputParser = gen_parser InputFile 'i'
 outputParser = gen_parser OutputFile 'o'
 dirParser = gen_parser OutputDir 'd'
 
-data TmpSettings = TmpSettings 
-  { mode :: String
-    , wait :: Integer
-    , tmploc :: String
-    , cpcmd :: String
-    , lockfile :: String
-    , ignoreErrors :: Bool
-    , cmd :: String
-  } deriving (Show)
+
 
 choicesReader xs = O.eitherReader $ checkInput xs
   where
@@ -187,6 +179,16 @@ modeHelpDoc =
     , "lock - include an flock on copy to the temporary directory."
     ]
 
+data TmpSettings = TmpSettings 
+  { mode :: String
+  , wait :: Integer
+  , tmploc :: String
+  , cpcmd :: String
+  , lockfile :: String
+  , ignoreErrors :: Bool
+  , cmd :: [String]
+  } deriving (Show)
+
 tmpOptions :: O.Parser TmpSettings
 tmpOptions =
   TmpSettings <$>
@@ -210,7 +212,7 @@ tmpOptions =
   O.switch 
     (O.long "ignore-errors" <> 
      O.help "Do not check for missing files before rewriting") <*>
-  O.strArgument (O.metavar "(TEMPLATE|-)")
+  O.many (O.argument O.auto (O.metavar "TEMPLATE..."))
 
 progDescDoc = P.vsep $
   [ paragraph ("Automatically wrap a command with copies to and" ++
@@ -254,18 +256,12 @@ rewrite settings cmd = do
 main = do
   settings <- O.customExecParser parserPrefs parserInfo
 
-  case (cmd settings) of 
-    "-" -> do 
+  case (length (cmd settings)) of 
+    0 -> do 
       ls <- ((liftM lines) getContents)
       out <- mapM (rewrite settings) ls
       putStrLn $ intercalate "\n" out
     otherwise -> do 
-      out <- rewrite settings (cmd settings)
-      putStrLn out
-  
-  -- case (cmd settings) of
-  --   "-" -> interact ((rewrite settings) . lines)
-  --   otherwise -> putStrLn $ rewrite settings (cmd settings)
-
-  -- putStrLn output
+      out <- mapM (rewrite settings) (cmd settings)
+      putStrLn $ intercalate "\n" out
 
