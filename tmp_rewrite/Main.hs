@@ -4,6 +4,7 @@ module Main
 where
 import           Control.Applicative ( liftA2, (<**>) )
 import           Control.Monad
+import           Control.Monad.Trans.Writer.Strict
 import           Data.List ( groupBy, intercalate )
 import           Data.Maybe
 import           Data.Semigroup ( (<>) )
@@ -150,7 +151,36 @@ cpBackRewrite s =
             [] -> Nothing
             otherwise -> Just $ cpBacks
 
--- this could be much better
+{-loggedMissing :: (FilePath -> IO Bool) -> String -> FilePath -> Int -> Writer [String] Int
+loggedMissing p l f n =
+  case p f of
+    False -> tell [ l ++ f ] >>= return (n + 1)
+    True -> return n--}
+
+-- (\n -> 
+--  liftM (logMissing n "Directory does not exist: ") (filterNotM doesDirectoryExist dirDests)
+
+logMissing :: Int -> String -> [String] -> Writer [String] Int
+logMissing n prefix (f:fs) = 
+  tell [prefix ++ f ++ "\n"] >> logMissing (n+1) prefix fs
+logMissing n _ [] = return n
+
+checkLocationsMonadic :: TmpSettings -> IO ()
+checkLocationsMonadic s = 
+  liftM (logMissing 0 "File does not exist: ") missingInputs >>= (\w -> 
+    liftM (logMissing ((fst . runWriter) w) "Directory does not exist: ") missingDirs) >>= (\w -> 
+      reportErrors (runWriter w))
+  where
+    inputs = catMaybes $ map inputFileName $ cmdParts s
+    missingInputs = filterNotM doesFileExist inputs
+    dirs = catMaybes $ map outputDirName $ cmdParts s
+    dirDests = map takeDirectory dirs 
+    missingDirs = filterNotM doesDirectoryExist dirDests
+    filterNotM p = filterM ((liftM not) . p)
+    reportErrors (0, _) = return ()
+    reportErrors (_, s) = error (concat s)
+
+-- this could be much better (Writer monad?)
 checkLocations :: TmpSettings -> IO ()
 checkLocations s = do
     let inputs = catMaybes $ map inputFileName $ cmdParts s
@@ -240,6 +270,6 @@ rewrite settings = intercalate " ; " $
 
 main = do
   settings <- O.customExecParser parserPrefs parserInfo
-  checkLocations settings
+  checkLocationsMonadic settings
   putStrLn $ rewrite settings
 
