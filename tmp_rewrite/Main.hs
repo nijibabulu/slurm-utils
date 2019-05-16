@@ -105,7 +105,7 @@ rewriteToTmp :: TmpSettings -> String -> String
 rewriteToTmp s p =
   case mode s of
     "test" -> p
-    otherwise -> (tmploc s) </> takeBaseName p
+    otherwise -> (tmploc s) </> takeFileName p
 
 mkdirRewrite :: TmpSettings -> [CmdPart] -> Maybe String
 mkdirRewrite s cmdParts =
