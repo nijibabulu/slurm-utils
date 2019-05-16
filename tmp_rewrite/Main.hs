@@ -8,6 +8,7 @@ import           Data.List ( groupBy, intercalate )
 import           Data.Maybe
 import           Data.Semigroup ( (<>) )
 import           Data.Text ( strip )
+import           GHC.Base ( returnIO )
 import qualified Options.Applicative as O
 import qualified Options.Applicative.Help.Pretty as P
 import           System.Directory
@@ -27,8 +28,8 @@ rest :: CmdPart -> String
 rest (Rest s) = s
 
 applyFileName fs x =
-    let fns = catMaybes $ map (\f -> f x) fs
-    in case fns of 
+    let filenames = catMaybes $ map (\f -> f x) fs
+    in case filenames of 
         [] -> Nothing
         [f] -> Just f
 
@@ -212,7 +213,7 @@ tmpOptions =
   O.switch 
     (O.long "ignore-errors" <> 
      O.help "Do not check for missing files before rewriting") <*>
-  O.many (O.argument O.auto (O.metavar "TEMPLATE..."))
+  O.many (O.argument O.str (O.metavar "TEMPLATE..."))
 
 progDescDoc = P.vsep $
   [ paragraph ("Automatically wrap a command with copies to and" ++
@@ -256,12 +257,10 @@ rewrite settings cmd = do
 main = do
   settings <- O.customExecParser parserPrefs parserInfo
 
-  case (length (cmd settings)) of 
-    0 -> do 
-      ls <- ((liftM lines) getContents)
-      out <- mapM (rewrite settings) ls
-      putStrLn $ intercalate "\n" out
-    otherwise -> do 
-      out <- mapM (rewrite settings) (cmd settings)
-      putStrLn $ intercalate "\n" out
+  ls <- case (length (cmd settings)) of 
+    0 -> ((liftM lines) getContents) 
+    otherwise -> returnIO (cmd settings) 
+
+  out <- mapM (rewrite settings) ls
+  putStrLn $ intercalate "\n" out
 
