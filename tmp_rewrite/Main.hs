@@ -4,7 +4,7 @@ module Main
 where
 import           Control.Applicative ( liftA2, (<**>) )
 import           Control.Monad
-import           Data.List ( groupBy, intercalate )
+import           Data.List ( groupBy, intercalate, uncons )
 import           Data.Maybe
 import           Data.Semigroup ( (<>) )
 import           Data.Text ( strip )
@@ -17,11 +17,11 @@ import           System.IO ( stdin )
 import           Text.Regex.Applicative
 import           Text.Read ( readEither )
 
-data CmdPart =   Rest String          -- a non-translated string of the command
-               | InputFile String     -- an input file
-               | OutputFile String    -- an output file
-               | OutputDir String     -- an output directory
-               | InvalidRewriteable String
+data CmdPart =   Rest String               -- a non-translated string of the command
+               | InputFile String          -- an input file
+               | OutputFile String         -- an output file
+               | OutputDir String          -- an output directory
+               | InvalidRewriteable String -- error state for the command parser
                deriving Show
 
 rest :: CmdPart -> String
@@ -31,9 +31,7 @@ rest (Rest s) = s
 applyFileName :: [CmdPart -> Maybe String] -> CmdPart -> Maybe String
 applyFileName fs x =
     let filenames = catMaybes $ map (\f -> f x) fs
-    in case filenames of 
-        [] -> Nothing
-        [fn] -> Just fn
+    in (fmap fst . uncons) filenames
 
 -- accessors for input and output file names
 inputFileName, outputFileName, outputDirName, rewriteableFileName, outputPath :: 
@@ -58,16 +56,15 @@ cmdToken = (InputFile <$> rewriteableToken "i")
     <|> (InvalidRewriteable <$> bracedToken (many anySym))
 
 parseCmd :: String -> Either String [CmdPart]
-parseCmd s = let parseCmd' cs r s@(h:t) = 
+parseCmd s = let getRest "" = []
+                 getRest r = [Rest r]
+                 parseCmd' cs r s@(h:t) = 
                   let next = findFirstPrefix cmdToken s in
                         case next of
                           Just (InvalidRewriteable e, _) -> Left $ "Invalid rewriteable:" ++ e ++ "\n" ++ rewriteableInfo
-                          Just (cmd, suf) -> case r of 
-                                      "" -> parseCmd' (cs ++ [cmd]) "" suf
-                                      r -> parseCmd' (cs ++ [Rest r] ++ [cmd]) "" suf
+                          Just (cmd, suf) -> parseCmd' (cs ++ (getRest r) ++ [cmd]) "" suf
                           Nothing -> parseCmd' cs (r ++ [h]) t
-                 parseCmd' cs "" "" = Right cs
-                 parseCmd' cs r "" = Right (cs ++ [Rest r])
+                 parseCmd' cs r "" = Right (cs ++ (getRest r))
               in parseCmd' [] "" s
 
 choicesReader :: [String] -> O.ReadM String
@@ -245,10 +242,8 @@ rewrite settings cmd = do
 
 main = do
   settings <- O.customExecParser parserPrefs parserInfo
-
   ls <- case (length (cmd settings)) of 
     0 -> ((liftM lines) getContents) 
     otherwise -> returnIO (cmd settings) 
-
   out <- mapM (rewrite settings) ls
   putStrLn $ intercalate "\n" out
