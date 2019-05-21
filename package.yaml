@@ -24,6 +24,8 @@ dependencies:
 
 library:
   source-dirs: src
+  dependencies:
+    - ansi-wl-pprint
 
 executables:
   tmprewrite:
@@ -40,6 +42,18 @@ executables:
     - optparse-applicative
     - filepath
     - directory
+  slurmtasks:
+    main:                Main.hs
+    source-dirs:         slurmtasks
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - slurm-utils
+    - optparse-applicative
+    - filepath
+  
 
 tests:
   slurm-utils-test:
