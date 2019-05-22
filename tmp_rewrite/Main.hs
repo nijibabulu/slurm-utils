@@ -169,7 +169,7 @@ data TmpSettings = TmpSettings
   , cpcmd :: String
   , lockfile :: String
   , ignoreErrors :: Bool
-  , cmd :: [String]
+  , cmd :: Maybe String
   } deriving (Show)
 
 tmpOptions :: O.Parser TmpSettings
@@ -201,7 +201,7 @@ tmpOptions =
           (  O.long "ignore-errors"
           <> O.help "Do not check for missing files before rewriting"
           )
-    <*> O.many (O.argument O.str (O.metavar "TEMPLATE..."))
+    <*> O.optional (O.argument O.str (O.metavar "TASK_TEMPLATE"))
 
 rewriteableInfo :: String
 rewriteableInfo = "Rewriteables use a formatting syntax of {INPUT:i} for input "
@@ -247,8 +247,8 @@ rewrite settings cmd = do
 
 main = do
   settings <- O.customExecParser parserPrefs parserInfo
-  ls <- case length (cmd settings) of
-    0 -> fmap lines getContents
-    _ -> returnIO (cmd settings)
+  ls <- case cmd settings of
+    Nothing -> fmap lines getContents
+    Just template -> returnIO [template]
   out <- mapM (rewrite settings) ls
   putStrLn $ intercalate "\n" out

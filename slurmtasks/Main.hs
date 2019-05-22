@@ -19,12 +19,11 @@ data SlurmScriptHeader = SlurmScriptHeader
     , limit :: Maybe Int
     } deriving Show
 
-data FileInput =
-    Stdin | File String
-
 data SlurmScriptSettings = SlurmScriptSettings
     { header :: SlurmScriptHeader
-    , file :: FileInput
+    , groups :: Int
+    , ulimit :: Bool
+    , file :: Maybe String
     }
 
 slurmScriptParser :: Parser SlurmScriptHeader
@@ -38,15 +37,10 @@ slurmScriptParser = SlurmScriptHeader
     <*> strOption (long "name" <> short 'n' <> value "job" <> showDefault)
     <*> optional (option auto (long "limit" <> short 'l'))
 
-fileInputParser :: Parser FileInput
-fileInputParser = let
-    fileInput = File <$> strOption (long "file" <> short 'f')
-    stdInput = flag' Stdin (long "stdin" <> short 'i')
-    in stdInput <|> fileInput
-
 optParser :: Parser SlurmScriptSettings
-optParser = SlurmScriptSettings <$> slurmScriptParser <*> fileInputParser
-   
+optParser = SlurmScriptSettings
+        <$> slurmScriptParser
+        <*> optional (argument auto (metavar "TASKFILE"))
 
 buildScript :: SlurmScriptHeader -> [String] -> String
 buildScript h tasks = let
@@ -79,9 +73,9 @@ buildScript h tasks = let
 main = do
     opts <- execParser $ info (optParser <**> helper) idm
     contents <- case file opts of
-            Stdin ->  getContents
-            (File fn) -> readFile fn
-    let tasks = lines contents
-    print $ buildScript (header opts) tasks
+            Nothing -> getContents
+            (Just fn) -> readFile fn
+    let tasks = processTasks opts (lines contents)
+    putStrLn $ buildScript (header opts) tasks
 
 -- fromJust $ getParseResult $ execParserPure defaultPrefs ( info (slurmScriptParser  <**> helper) idm) []
