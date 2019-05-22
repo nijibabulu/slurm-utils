@@ -34,19 +34,19 @@ slurmScriptParser :: Parser SlurmScriptProlog
 slurmScriptParser =
     SlurmScriptProlog
         <$> strOption
-                (long "logdir" <> value "." <> showDefault
+                (long "logdir" <> metavar "DIR" <> value "." <> showDefault
               <> help "Directory in which to place output and error files")
         <*> option auto
-                (long "cpus" <> short 'c' <> value 1 <> showDefault
+                (long "cpus" <> short 'c' <> metavar "N" <> value 1 <> showDefault
               <> help "How many CPUs to request")
         <*> option auto
-                (long "mem" <> short 'm' <> value 3 <> showDefault
+                (long "mem" <> short 'm' <> metavar "GB" <> value 3 <> showDefault
               <> help "How much memory (in GB) to request")
         <*> strOption
                 (long "partition" <> value "basic" <> showDefault
               <> help "Which partition to request")
         <*> option auto
-                (long "nice" <> value 0 <> showDefault
+                (long "nice" <> metavar "N" <> value 0 <> showDefault
               <> help "The \"nice\" value of the job (higher means lower priority)")
         <*> strOption
                 (long "name" <> short 'n' <> value "job" <> showDefault
@@ -57,14 +57,14 @@ slurmScriptParser =
                     ++ "These can be combined in ways such as array-8core&localmirror. "
                     ++ "See the slurm manual for more information."))
         <*> optional (strOption
-                (long "workdir"
+                (long "workdir" <> metavar "DIR"
             <> help "Specify a working directory for the jobs on the remote node"))
         <*> optional (option auto
-                (long "slots" <> short 's'
-              <> help "Maximum number of nodes to run the job on"))
+                (long "slots" <> short 's' <> metavar "N"
+              <> help "Maximum number of nodes to run the job on."))
         <*> optional (strOption
                 (long "license" <> short 'l'
-              <> help "License to give the job, e.g. scratch-highio."))
+              <> help "License to give the job, e.g. \"scratch-highio\"."))
 
 optParser :: Parser SlurmScriptSettings
 optParser = SlurmScriptSettings
