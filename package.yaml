@@ -53,6 +53,7 @@ executables:
     - slurm-utils
     - optparse-applicative
     - filepath
+    - text
   
 
 tests:

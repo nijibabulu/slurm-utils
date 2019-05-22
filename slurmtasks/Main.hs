@@ -3,6 +3,7 @@ module Main where
 import Control.Monad
 import Control.Applicative (optional)
 import Data.List
+import qualified Data.Text as T
 import Options.Applicative hiding (header)
 import System.FilePath.Posix
 
@@ -95,6 +96,7 @@ main = do
     contents <- case file opts of
             Nothing -> getContents
             (Just fn) -> readFile fn
+    guard $ (T.length (T.strip (T.pack contents))) > 0
     let tasks = processTasks opts (lines contents)
     putStrLn $ buildScript (header opts) tasks
 
