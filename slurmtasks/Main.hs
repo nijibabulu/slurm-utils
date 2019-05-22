@@ -73,15 +73,13 @@ buildScript h tasks = let
         , caseBlock "${SLURM_ARRAY_TASK_ID}" (map show [1..]) (map (show . buildTask) tasks)
         ]
 
-splitBy :: Int -> [a] -> [[a]]
-splitBy n xs = let
-    splitBy' acc xs' n =  case splitAt n xs' of
-        (h,[]) -> (acc ++ [h])
-        (h,xs'') -> splitBy' (acc ++ [h]) xs'' n
-    in splitBy' [] xs n
+splitEvery :: Int -> [a] -> [[a]]
+splitEvery _ [] = []
+splitEvery n xs = as : splitEvery n bs 
+    where (as,bs) = splitAt n xs
 
 groupTasksBy :: Int -> [String] -> [String]
-groupTasksBy n tasks = map (intercalate "\n") (splitBy n tasks)
+groupTasksBy n tasks = map (intercalate "\n") (splitEvery n tasks)
 
 processTasks :: SlurmScriptSettings -> [String] -> [String]
 processTasks opts tasks =
