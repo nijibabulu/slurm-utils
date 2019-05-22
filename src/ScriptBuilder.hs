@@ -21,6 +21,11 @@ echoStmt arg = text $ "echo " ++ arg
 quotedEchoStmt arg = echoStmt ("\"" ++ arg ++ "\"")
 hardQuotedEchoStmt arg = echoStmt ("'" ++ arg ++ "'")
 
+redir :: String -> Doc -> Doc
+redir s d = d <+> text s 
+redirOutErr = redir "1>&2"
+redirErrOut = redir "2>&1"
+
 ifStmt, ifTestStmt :: Doc -> Doc -> Doc
 ifStmt cond body = text "if " <+> cond <+> text "; then" <$> (bump  body) <$> text "fi"
 ifTestStmt cond body = ifStmt (text "[ " <+> cond <+> text " ]") body

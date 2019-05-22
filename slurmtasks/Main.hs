@@ -34,7 +34,7 @@ slurmScriptParser :: Parser SlurmScriptProlog
 slurmScriptParser =
     SlurmScriptProlog
         <$> strOption
-                (long "logdir" <> metavar "DIR" <> value "." <> showDefault
+                (long "logdir" <> short 'o' <> metavar "DIR" <> value "." <> showDefault
               <> help "Directory in which to place output and error files")
         <*> option auto
                 (long "cpus" <> short 'c' <> metavar "N" <> value 1 <> showDefault
@@ -94,7 +94,7 @@ buildScript pl tasks = let
          , hardQuotedEchoStmt (concatMap (\x -> if x == '\'' then "'\"'\"'\"'" else [x]) task)
          , quotedEchoStmt "  </Command>"
          , scriptStmt task
-         , ifTestStmt (scriptStmt "$? -ne 0") (quotedEchoStmt "Your program exited with error $?")
+         , ifTestStmt (scriptStmt "$? -ne 0") (redirOutErr (quotedEchoStmt "Your program exited with error $?"))
          , quotedEchoStmt "Job ${SLURM_JOB_ID}.${SLURM_ARRAY_TASK_ID} finished on ${HOSTNAME} at $(date)"
          ]
      buildHeader h tasks = scriptLines $
