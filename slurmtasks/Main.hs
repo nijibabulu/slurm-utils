@@ -40,6 +40,8 @@ slurmScriptParser = SlurmScriptHeader
 optParser :: Parser SlurmScriptSettings
 optParser = SlurmScriptSettings
         <$> slurmScriptParser
+        <*> option auto (long "group-by" <> short 'g' <> value 1 <> showDefault)
+        <*> flag True False (long "no-ulimit" <> short 'u')
         <*> optional (argument auto (metavar "TASKFILE"))
 
 buildScript :: SlurmScriptHeader -> [String] -> String
@@ -69,6 +71,24 @@ buildScript h tasks = let
         [ buildHeader h tasks
         , caseBlock "${SLURM_ARRAY_TASK_ID}" (map show [1..]) (map (show . buildTask) tasks)
         ]
+
+splitBy :: Int -> [a] -> [[a]]
+splitBy n xs = let
+    splitBy' acc xs' n =  case splitAt n xs' of
+        (h,[]) -> (acc ++ [h])
+        (h,xs'') -> splitBy' (acc ++ [h]) xs'' n
+    in splitBy' [] xs n
+
+groupTasksBy :: Int -> [String] -> [String]
+groupTasksBy n tasks = map (intercalate "\n") (splitBy n tasks)
+
+processTasks :: SlurmScriptSettings -> [String] -> [String]
+processTasks opts tasks =
+    let prependUlimit opts task = if ulimit opts
+            then "ulimit -v " ++ show (mem (header opts) * 1127) ++ "\n" ++ task
+            else task
+        groupedTasks = groupTasksBy (groups opts) tasks
+    in map (prependUlimit opts) groupedTasks
 
 main = do
     opts <- execParser $ info (optParser <**> helper) idm
