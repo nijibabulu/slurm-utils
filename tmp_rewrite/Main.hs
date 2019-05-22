@@ -218,10 +218,17 @@ progDescDoc = P.vsep
             ++ rewriteableInfo
             ++ "For example,")
   , P.text ""
-  , P.text  "tmp_rewrite \"cat {infile1:i} {infile2:i} > {outfile:o}\""
+  , P.text  "tmprewrite \"cat {infile1:i} {infile2:i} > {outfile:o}\""
   , P.text ""
-  , P.text "set -e ; (flock -w 7200 200 ; hostname > LOCK-host ; cp -Lr infile1 infile2 $TMPDIR) 200> LOCK ; cat $TMPDIR/infile1 $TMPDIR/infile2 > $TMPDIR/outfile ; cp -Lr $TMPDIR/outfile ."
+  , P.text ("set -e ; (flock -w 7200 200 ; hostname > LOCK-host ; "
+        ++ "cp -Lr infile1 infile2 $TMPDIR) 200> LOCK ; "
+        ++ "cat $TMPDIR/infile1 $TMPDIR/infile2 > $TMPDIR/outfile ; "
+        ++ "cp -Lr $TMPDIR/outfile .")
+  , P.text ""
+  , paragraph ("If no template is supplied in the argument, commands are "
+           ++ "read line-by-line from stdin.")
   ]
+  
 parserInfo :: O.ParserInfo TmpSettings
 parserInfo =
   O.info
