@@ -17,7 +17,7 @@ data SlurmScriptHeader = SlurmScriptHeader
     , partition :: String
     , nice :: Int
     , name :: String
-    , limit :: Maybe Int
+    , features :: String
     } deriving Show
 
 data SlurmScriptSettings = SlurmScriptSettings
@@ -28,15 +28,34 @@ data SlurmScriptSettings = SlurmScriptSettings
     }
 
 slurmScriptParser :: Parser SlurmScriptHeader
-slurmScriptParser = SlurmScriptHeader
-    <$> strOption (long "logdir" <> value "." <> showDefault)
-    <*> option auto (long "cpus" <> short 'c' <> value 1 <> showDefault)
-    <*> strOption (long "workdir" <> value "." <> showDefault)
-    <*> option auto (long "mem" <> short 'm' <> value 3 <> showDefault)
-    <*> strOption (long "partition" <> value "basic" <> showDefault)
-    <*> option auto (long "nice" <> value 0 <> showDefault)
-    <*> strOption (long "name" <> short 'n' <> value "job" <> showDefault)
-    <*> optional (option auto (long "limit" <> short 'l'))
+slurmScriptParser =
+    SlurmScriptHeader
+        <$> strOption
+                (long "logdir" <> value "." <> showDefault
+              <> help "Directory in which to place output and error files")
+        <*> option auto
+                (long "cpus" <> short 'c' <> value 1 <> showDefault
+              <> help "How many CPUs to request")
+        <*> strOption
+                (long "workdir" <> value "." <> showDefault
+              <> help "The working directory for the jobs on the remote node")
+        <*> option auto
+                (long "mem" <> short 'm' <> value 3 <> showDefault
+              <> help "How much memory (in GB) to request")
+        <*> strOption
+                (long "partition" <> value "basic" <> showDefault
+              <> help "Which partition to request")
+        <*> option auto
+                (long "nice" <> value 0 <> showDefault
+              <> help "The \"nice\" value of the job (higher means lower priority)")
+        <*> strOption
+                (long "name" <> short 'n' <> value "job" <> showDefault
+              <> help "The name of the job")
+        <*> strOption
+                (long "features" <> short 'f' <> value "array-1core" <> showDefault
+                <> help ("The required features of the nodes you will be submitting to. "
+                      ++ "These can be combined in ways such as array-8core&localmirror. "
+                      ++ "See the slurm manual for more information."))
 
 optParser :: Parser SlurmScriptSettings
 optParser = SlurmScriptSettings
@@ -47,10 +66,10 @@ optParser = SlurmScriptSettings
 
 buildScript :: SlurmScriptHeader -> [String] -> String
 buildScript h tasks = let
-    buildTask task = scriptLines 
+    buildTask task = scriptLines
         [ quotedEchoStmt "Job ${SLURM_JOB_ID}.${SLURM_ARRAY_TASK_ID} started on ${HOSTNAME} at $(date)"
         , quotedEchoStmt "  <Command>"
-        , quotedEchoStmt (concatMap (\x -> if x == '\'' then "'\"'\"'\"'" else [x]) task)
+        , hardQuotedEchoStmt (concatMap (\x -> if x == '\'' then "'\"'\"'\"'" else [x]) task)
         , quotedEchoStmt "  </Command>"
         , scriptStmt task
         , ifTestStmt (scriptStmt "$? -ne 0") (quotedEchoStmt "Your program exited with error $?")
@@ -64,10 +83,12 @@ buildScript h tasks = let
         , slurmCpu (show (cpus h))
         , slurmWd (workdir h)
         , slurmArray ("1-" ++ show (length tasks))
-        , slurmMem (show $ mem h)
+        , slurmMem (show $ mem h * 1000)
         , slurmNice (show (nice h))
         , slurmName (name h)
-        ] 
+        , slurmConstraint (features h)
+        , scriptStmt ""
+        ]
     in show $ scriptLines
         [ buildHeader h tasks
         , caseBlock "${SLURM_ARRAY_TASK_ID}" (map show [1..]) (map (show . buildTask) tasks)
@@ -75,7 +96,7 @@ buildScript h tasks = let
 
 splitEvery :: Int -> [a] -> [[a]]
 splitEvery _ [] = []
-splitEvery n xs = as : splitEvery n bs 
+splitEvery n xs = as : splitEvery n bs
     where (as,bs) = splitAt n xs
 
 groupTasksBy :: Int -> [String] -> [String]
@@ -94,7 +115,7 @@ main = do
     contents <- case file opts of
             Nothing -> getContents
             (Just fn) -> readFile fn
-    guard $ (T.length (T.strip (T.pack contents))) > 0
+    guard $ T.length (T.strip (T.pack contents)) > 0
     let tasks = processTasks opts (lines contents)
     putStrLn $ buildScript (header opts) tasks
 

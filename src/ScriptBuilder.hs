@@ -13,12 +13,13 @@ scriptLines = vsep
 scriptStmt :: String -> Doc
 scriptStmt = text
 
-comment, shebang, slurmDirective, echoStmt, quotedEchoStmt :: String -> Doc
+comment, shebang, slurmDirective, echoStmt, quotedEchoStmt, hardQuotedEchoStmt :: String -> Doc
 comment = text . ("#"++)
 shebang = comment . ("!"++)
 slurmDirective = comment . ("SBATCH "++)
 echoStmt arg = text $ "echo " ++ arg
 quotedEchoStmt arg = echoStmt ("\"" ++ arg ++ "\"")
+hardQuotedEchoStmt arg = echoStmt ("'" ++ arg ++ "'")
 
 ifStmt, ifTestStmt :: Doc -> Doc -> Doc
 ifStmt cond body = text "if " <+> cond <+> text "; then" <$> (bump  body) <$> text "fi"
@@ -40,7 +41,7 @@ shebangBash = shebang "/bin/bash"
 slurmOpt :: String -> String -> Doc
 slurmOpt o v = slurmDirective $ "--" ++ o ++ "=" ++ v
 
-slurmMem, slurmCpu, slurmWd, slurmArray, slurmPartition, slurmNice, slurmName, slurmOutput, slurmError :: String -> Doc
+slurmMem, slurmCpu, slurmWd, slurmArray, slurmPartition, slurmNice, slurmName, slurmOutput, slurmError, slurmConstraint :: String -> Doc
 slurmMem = slurmOpt "mem"
 slurmCpu = slurmOpt "cpus-per-task"
 slurmWd = slurmOpt "workdir"
@@ -50,5 +51,6 @@ slurmNice = slurmOpt "nice"
 slurmName = slurmOpt "job-name"
 slurmOutput = slurmOpt "output"
 slurmError = slurmOpt "error"
+slurmConstraint = slurmOpt "constraint"
 
 -- slurmArrayCase cmds = caseBlock "${SLURM_ARRAY_TASK_ID}" (map show [0..]) cmds
