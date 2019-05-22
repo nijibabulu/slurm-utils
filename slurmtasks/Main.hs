@@ -2,7 +2,7 @@ module Main where
 
 import Control.Monad
 import Control.Applicative (optional)
-import Data.List
+import Data.List (intercalate)
 import Data.Maybe
 import qualified Data.Text as T
 import Options.Applicative
@@ -107,6 +107,7 @@ buildScript pl tasks = let
          , (slurmMem . show . (1000*)) (mem h)
          , (slurmNice . show) (nice h)
          , slurmName (name h)
+         , slurmPartition (partition h)
          , slurmConstraint (features h)
          ] ++
          catMaybes [
