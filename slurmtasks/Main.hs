@@ -132,7 +132,7 @@ groupTasksBy n tasks = map (intercalate "\n") (splitEvery n tasks)
 processTasks :: SlurmScriptSettings -> [String] -> [String]
 processTasks opts tasks =
     let prependUlimit opts task = if ulimit opts
-            then "ulimit -v " ++ show (mem (prolog opts) * 1127) ++ "\n" ++ task
+            then "ulimit -v " ++ show (mem (prolog opts) * 1127000) ++ "\n" ++ task
             else task
         groupedTasks = groupTasksBy (groups opts) tasks
     in map (prependUlimit opts) groupedTasks
