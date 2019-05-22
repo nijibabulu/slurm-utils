@@ -139,10 +139,13 @@ checkLocations s cmdParts = do
   inputErrors <- concat <$> mapM (makeError "File does not exist: ") missingInputs
   missingDirs <- filterNotM doesDirectoryExist dirDests
   dirErrors <- concat <$> mapM (makeError "Directory does not exist: ")  missingDirs
-  reportErrors (ignoreErrors s) (inputErrors ++ dirErrors)
+  conflictingPaths <- filterM doesPathExist outPaths
+  conflictErrors <- concat <$> mapM (makeError "Destination is an existing filesystem object: ") conflictingPaths
+  reportErrors (ignoreErrors s) (inputErrors ++ dirErrors ++ conflictErrors)
   where
     inputs = mapMaybe inputFileName cmdParts
     dirs = mapMaybe outputDirName cmdParts
+    outPaths = mapMaybe outputPath cmdParts
     dirDests = map takeDirectory dirs
     filterNotM p = filterM (fmap not . p)
     makeError prefix f = return (prefix ++ f ++ "\n")
