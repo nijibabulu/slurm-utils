@@ -22,6 +22,11 @@ echoStmt arg = echoStmt_ $ text arg
 quotedEchoStmt arg = echoStmt_ $ dquotes $ text arg
 hardQuotedEchoStmt arg = echoStmt_ $ squotes $ text $ concatMap (\x -> if x == '\'' then "'\"'\"'\"'" else [x]) arg
 
+redir :: String -> Doc -> Doc
+redir s d = d <+> text s 
+redirOutErr = redir "1>&2"
+redirErrOut = redir "2>&1"
+
 ifStmt, ifTestStmt :: Doc -> Doc -> Doc
 ifStmt cond body = text "if " <+> cond <+> text "; then" <$> (bump  body) <$> text "fi"
 ifTestStmt cond body = ifStmt (text "[ " <+> cond <+> text " ]") body
