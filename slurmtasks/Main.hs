@@ -88,11 +88,12 @@ parserInfo = info
 
 buildScript :: SlurmScriptProlog -> [String] -> String
 buildScript pl tasks = let
-     buildTask task = scriptLines
+     buildTask task = scriptLines $
          [ quotedEchoStmt "Job ${SLURM_JOB_ID}.${SLURM_ARRAY_TASK_ID} started on ${HOSTNAME} at $(date)"
          , quotedEchoStmt "  <Command>"
-         , hardQuotedEchoStmt (concatMap (\x -> if x == '\'' then "'\"'\"'\"'" else [x]) task)
-         , quotedEchoStmt "  </Command>"
+         ] ++ 
+         map hardQuotedEchoStmt (lines task) ++ 
+         [ quotedEchoStmt "  </Command>"
          , scriptStmt task
          , ifTestStmt (scriptStmt "$? -ne 0") (quotedEchoStmt "Your program exited with error $?")
          , quotedEchoStmt "Job ${SLURM_JOB_ID}.${SLURM_ARRAY_TASK_ID} finished on ${HOSTNAME} at $(date)"

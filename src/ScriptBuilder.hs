@@ -17,9 +17,10 @@ comment, shebang, slurmDirective, echoStmt, quotedEchoStmt, hardQuotedEchoStmt :
 comment = text . ("#"++)
 shebang = comment . ("!"++)
 slurmDirective = comment . ("SBATCH "++)
-echoStmt arg = text $ "echo " ++ arg
-quotedEchoStmt arg = echoStmt ("\"" ++ arg ++ "\"")
-hardQuotedEchoStmt arg = echoStmt ("'" ++ arg ++ "'")
+echoStmt_ d = text "echo " <+> d
+echoStmt arg = echoStmt_ $ text arg
+quotedEchoStmt arg = echoStmt_ $ dquotes $ text arg
+hardQuotedEchoStmt arg = echoStmt_ $ squotes $ text $ concatMap (\x -> if x == '\'' then "'\"'\"'\"'" else [x]) arg
 
 ifStmt, ifTestStmt :: Doc -> Doc -> Doc
 ifStmt cond body = text "if " <+> cond <+> text "; then" <$> (bump  body) <$> text "fi"
