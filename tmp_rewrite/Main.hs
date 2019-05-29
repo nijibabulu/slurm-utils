@@ -135,7 +135,7 @@ reportErrors False s = error $ "\n" ++ s ++
 
 checkLocations :: TmpSettings -> [CmdPart] -> IO ()
 checkLocations s cmdParts = do
-  missingInputs <- filterNotM doesFileExist inputs
+  missingInputs <- filterNotM doesPathExist inputs
   inputErrors <- concat <$> mapM (makeError "File does not exist: ") missingInputs
   missingDirs <- filterNotM doesDirectoryExist dirDests
   dirErrors <- concat <$> mapM (makeError "Directory does not exist: ")  missingDirs
