@@ -104,9 +104,8 @@ verifySlurmTasksOpts SlurmScriptSettings{prolog=pl, ignoreErrors=skip} =
             r <- tryIOError $ writable <$> getPermissions d
             case r of
                 Left e
-                    | isDoesNotExistError e -> verifyError $ unwords [t, "directory", d, "does not exist!"]
+                    | isDoesNotExistError e -> verifyError $ unwords [t, "directory", d, "does not exist"]
                     | otherwise -> ioError e
                 Right False -> verifyError $ unwords ["Insufficient permissions to write to", t, "direcotry", d]
                 Right True -> return ()
-            where
-                verifyError errmsg = errorWithoutStackTrace $ errmsg ++ "\nUse --ignore-errors to suppress this error"
+        verifyError errmsg = errorWithoutStackTrace $ errmsg ++ "\nUse --ignore-errors to suppress this error"
