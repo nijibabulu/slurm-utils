@@ -1,21 +1,20 @@
 #!/usr/bin/env stack
 
-module Main 
+module Main
 where
-import           Control.Applicative ( liftA2, (<**>), (<$>) )
+import           Control.Applicative ( liftA2, (<$>) )
 import           Control.Monad
 import           Data.List ( groupBy, intercalate, uncons )
 import           Data.Maybe
 import           Data.Semigroup ( (<>) )
 import           Data.Text ( strip )
 import           GHC.Base ( returnIO )
-import qualified Options.Applicative as O
-import qualified Options.Applicative.Help.Pretty as P
 import           System.Directory
 import           System.FilePath.Posix
 import           System.IO ( stdin )
 import           Text.Regex.Applicative
 import           Text.Read ( readEither )
+import           TmpRewriteOpts
 
 data CmdPart =   Rest String               -- a non-translated string of the command
                | InputFile String          -- an input file
@@ -26,21 +25,6 @@ data CmdPart =   Rest String               -- a non-translated string of the com
 
 rest :: CmdPart -> String
 rest (Rest s) = s
-
--- helper function to filter command parts of certain types
-applyFileName :: [CmdPart -> Maybe String] -> CmdPart -> Maybe String
-applyFileName fs x =
-    let filenames = mapMaybe (\f -> f x) fs
-    in (fmap fst . uncons) filenames
-
--- accessors for input and output file names
-inputFileName, outputFileName, outputDirName, rewriteableFileName, outputPath ::
-    CmdPart -> Maybe String
-inputFileName x = case x of {(InputFile s) -> Just s; _ -> Nothing}
-outputFileName x = case x of {(OutputFile s) -> Just s; _ -> Nothing}
-outputDirName x = case x of {(OutputDir s) -> Just s; _ -> Nothing}
-rewriteableFileName =  applyFileName [inputFileName, outputFileName, outputDirName]
-outputPath = applyFileName [outputFileName, outputDirName]
 
 bracedToken :: RE Char String -> RE Char String
 bracedToken f =  sym '{' *> many (psym (/= ':')) <* sym ':' <* f <* sym '}'
@@ -60,18 +44,26 @@ parseCmd s = let getRest r = guard ((not . null) r) >> [Rest r]
                  parseCmd' cs r s@(h:t) =
                   let next = findFirstPrefix cmdToken s in
                         case next of
-                          Just (InvalidRewriteable e, _) -> Left $ "Invalid rewriteable:" ++ e ++ "\n" ++ rewriteableInfo
+                          Just (InvalidRewriteable e, _) -> Left $ "Invalid rewriteable:" ++ e ++ "\n" ++ rewriteableDoc
                           Just (cmd, suf) -> parseCmd' (cs ++ getRest r ++ [cmd]) "" suf
                           Nothing -> parseCmd' cs (r ++ [h]) t
                  parseCmd' cs r "" = Right (cs ++ getRest r)
               in parseCmd' [] "" s
 
-choicesReader :: [String] -> O.ReadM String
-choicesReader xs = O.eitherReader $ checkInput xs
-  where
-        checkInput xs input
-            | input `elem` xs = Right input
-            | otherwise = Left $ "Must choose one of " ++ intercalate ", " xs
+-- helper function to filter command parts of certain types
+applyFileName :: [CmdPart -> Maybe String] -> CmdPart -> Maybe String
+applyFileName fs x =
+    let filenames = mapMaybe (\f -> f x) fs
+    in (fmap fst . uncons) filenames
+
+-- accessors for input and output file names
+inputFileName, outputFileName, outputDirName, rewriteableFileName, outputPath ::
+    CmdPart -> Maybe String
+inputFileName x = case x of {(InputFile s) -> Just s; _ -> Nothing}
+outputFileName x = case x of {(OutputFile s) -> Just s; _ -> Nothing}
+outputDirName x = case x of {(OutputDir s) -> Just s; _ -> Nothing}
+rewriteableFileName =  applyFileName [inputFileName, outputFileName, outputDirName]
+outputPath = applyFileName [outputFileName, outputDirName]
 
 lockedCopy :: TmpSettings -> String -> String
 lockedCopy s c = case mode s of
@@ -150,96 +142,6 @@ checkLocations s cmdParts = do
     filterNotM p = filterM (fmap not . p)
     makeError prefix f = return (prefix ++ f ++ "\n")
 
-paragraph :: String -> P.Doc
-paragraph = P.fillSep . map P.text . words
-
-modes = ["lock", "test", "nolock"]
-modeHelpDoc =
-  P.hang 2 $
-  P.vsep $
-  map
-    paragraph
-    [ "Running mode:"
-    , "test - create commands rewriting the filenames without copying."
-    , "nolock - copy to the temporary directory."
-    , "lock - include an flock on copy to the temporary directory."
-    ]
-
-data TmpSettings = TmpSettings
-  { mode :: String
-  , wait :: Integer
-  , tmploc :: String
-  , cpcmd :: String
-  , lockfile :: String
-  , ignoreErrors :: Bool
-  , cmd :: Maybe String
-  } deriving (Show)
-
-tmpOptions :: O.Parser TmpSettings
-tmpOptions =
-  TmpSettings
-    <$> O.option
-          (choicesReader modes)
-          (O.long "mode" <> O.value "lock" <> O.showDefault <> O.helpDoc
-            (Just modeHelpDoc)
-          )
-    <*> O.option
-          O.auto
-          (O.long "wait" <> O.value 7200 <> O.showDefault <> O.help
-            "How long to wait before giving up the lock"
-          )
-    <*> O.strOption
-          (O.long "tmploc" <> O.value "$TMPDIR" <> O.showDefault <> O.help
-            "Location of the temporary directory to copy to"
-          )
-    <*> O.strOption
-          (O.long "cpcmd" <> O.value "cp -Lr" <> O.showDefault <> O.help
-            "Copy command to use"
-          )
-    <*> O.strOption
-          (O.long "lockfile" <> O.value "LOCK" <> O.showDefault <> O.help
-            "Name of the lock file"
-          )
-    <*> O.switch
-          (  O.long "ignore-errors"
-          <> O.help "Do not check for missing files before rewriting"
-          )
-    <*> O.optional (O.argument O.str (O.metavar "TASK_TEMPLATE"))
-
-rewriteableInfo :: String
-rewriteableInfo = "Rewriteables use a formatting syntax of {INPUT:i} for input "
-              ++  "file INPUT, {DIR:d} for output directory DIR (DIR is created) "
-              ++  "and {OUTPUT:o} for output file OUTPUT."
-
-progDescDoc = P.vsep
-  [ paragraph ("Automatically wrap a command with copies to and"
-            ++ "from a temporary directory and rewrite the "
-            ++ "command to use files in the temporary directory. "
-            ++ rewriteableInfo
-            ++ "For example,")
-  , P.text ""
-  , P.text  "tmprewrite \"cat {infile1:i} {infile2:i} > {outfile:o}\""
-  , P.text ""
-  , P.text ("set -e ; (flock -w 7200 200 ; hostname > LOCK-host ; "
-        ++ "cp -Lr infile1 infile2 $TMPDIR) 200> LOCK ; "
-        ++ "cat $TMPDIR/infile1 $TMPDIR/infile2 > $TMPDIR/outfile ; "
-        ++ "cp -Lr $TMPDIR/outfile .")
-  , P.text ""
-  , paragraph ("If no template is supplied in the argument, commands are "
-           ++ "read line-by-line from stdin.")
-  ]
-  
-parserInfo :: O.ParserInfo TmpSettings
-parserInfo =
-  O.info
-    (tmpOptions <**> O.helper)
-    (O.fullDesc <>
-     O.progDescDoc (Just progDescDoc) <>
-     O.header "tmp_rewrite - Rewrite command(s) in temporary space")
-
-parserPrefs :: O.ParserPrefs
-parserPrefs = O.prefs O.showHelpOnEmpty
-
 rewriteCmdParts :: TmpSettings -> [CmdPart] -> String
 rewriteCmdParts settings cmdParts = intercalate " ; " $
     mapMaybe (\f -> f settings cmdParts)
@@ -255,8 +157,9 @@ rewrite settings cmd = do
   checkLocations settings parsedCmd
   return $ rewriteCmdParts settings parsedCmd
 
+main :: IO ()
 main = do
-  settings <- O.customExecParser parserPrefs parserInfo
+  settings <- parseTmpSettings
   ls <- case cmd settings of
     Nothing -> fmap lines getContents
     Just template -> returnIO [template]
