@@ -6,6 +6,8 @@ module SlurmTasksOpts (
 ) where
 
 import Control.Monad (unless)
+import Control.Monad.Trans
+import Control.Monad.Writer.Strict
 import Data.List (intercalate)
 import Options.Applicative
 import System.IO.Error
@@ -93,19 +95,22 @@ parserInfo = info
 parseSlurmTasksOpts :: IO SlurmScriptSettings
 parseSlurmTasksOpts =  execParser parserInfo
 
--- TODO: make a writer version of this that accumulates errors
+verifyDir :: String -> String -> WriterT String IO ()
+verifyDir t d = do 
+    r <- (lift . tryIOError) $ writable <$> getPermissions d
+    case r of 
+        Left e 
+            | isDoesNotExistError e -> tell $ unwords [t, "directory", d, "does not exist\n"]
+            | otherwise -> (lift . ioError) e
+        Right False -> tell $ unwords ["Insufficient permissions to write to", t, "directory", d, "\n"]
+        Right True -> return ()
+
 verifySlurmTasksOpts :: SlurmScriptSettings -> IO ()
 verifySlurmTasksOpts SlurmScriptSettings{prolog=pl, ignoreErrors=skip} =
-    unless skip $ do
-        verifyDir "log" (logdir pl)
-        maybe (return ()) (verifyDir "working") (workdir pl)
-    where
-        verifyDir t d = do
-            r <- tryIOError $ writable <$> getPermissions d
-            case r of
-                Left e
-                    | isDoesNotExistError e -> verifyError $ unwords [t, "directory", d, "does not exist"]
-                    | otherwise -> ioError e
-                Right False -> verifyError $ unwords ["Insufficient permissions to write to", t, "direcotry", d]
-                Right True -> return ()
-        verifyError errmsg = errorWithoutStackTrace $ errmsg ++ "\nUse --ignore-errors to suppress this error"
+    unless skip $ do 
+        (_,e) <- runWriterT $ do
+            verifyDir "log" (logdir pl)
+            maybe ((lift . return) ()) (verifyDir "working") (workdir pl)
+        case e of
+            "" -> return ()
+            _ -> errorWithoutStackTrace ("\n" ++ e ++ "\nUse --ignore-errors to suppress errors")

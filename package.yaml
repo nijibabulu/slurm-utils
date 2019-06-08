@@ -4,6 +4,7 @@ library:
   - ansi-wl-pprint
   - optparse-applicative
   - directory
+  - mtl
 tests:
   slurm-utils-test:
     source-dirs: test
@@ -42,6 +43,7 @@ executables:
     - optparse-applicative
     - filepath
     - directory
+    - mtl
   slurmtasks:
     source-dirs: slurmtasks
     main: Main.hs

@@ -4,6 +4,8 @@ module Main
 where
 import           Control.Applicative ( liftA2, (<$>) )
 import           Control.Monad
+import           Control.Monad.Trans
+import           Control.Monad.Writer.Strict
 import           Data.List ( groupBy, intercalate, uncons )
 import           Data.Maybe
 import           Data.Semigroup ( (<>) )
@@ -16,15 +18,12 @@ import           Text.Regex.Applicative
 import           Text.Read ( readEither )
 import           TmpRewriteOpts
 
-data CmdPart =   Rest String               -- a non-translated string of the command
+data CmdPart =   Rest {rest :: String}     -- a non-translated string of the command
                | InputFile String          -- an input file
                | OutputFile String         -- an output file
                | OutputDir String          -- an output directory
                | InvalidRewriteable String -- error state for the command parser
                deriving Show
-
-rest :: CmdPart -> String
-rest (Rest s) = s
 
 bracedToken :: RE Char String -> RE Char String
 bracedToken f =  sym '{' *> many (psym (/= ':')) <* sym ':' <* f <* sym '}'
@@ -125,22 +124,33 @@ reportErrors _ "" = return ()
 reportErrors False s = error $ "\n" ++ s ++
   "\nFix these errors or use --ignore-errors to suppress them\n"
 
-checkLocations :: TmpSettings -> [CmdPart] -> IO ()
-checkLocations s cmdParts = do
-  missingInputs <- filterNotM doesPathExist inputs
-  inputErrors <- concat <$> mapM (makeError "File does not exist: ") missingInputs
-  missingDirs <- filterNotM doesDirectoryExist dirDests
-  dirErrors <- concat <$> mapM (makeError "Directory does not exist: ")  missingDirs
-  conflictingPaths <- filterM doesPathExist outPaths
-  conflictErrors <- concat <$> mapM (makeError "Destination is an existing filesystem object: ") conflictingPaths
-  reportErrors (ignoreErrors s) (inputErrors ++ dirErrors ++ conflictErrors)
+{-|
+   @'logFileErrors' cmdParts wantFile validFile errPrefix@ logs errors for
+   particular types of files. All @cmdParts@ resulting in @Just@ in
+   @wantFile@ are validated with @validFile@. Each invalidated file
+   is written to the writer monad with @errPrefix@ as a prefix.
+-}
+logFileErrors :: [CmdPart]                 -- Parts of the parsed command
+              -> (CmdPart -> Maybe String) -- Predicate for parts of the commands to check
+              -> (FilePath -> IO Bool)     -- File validator; a False result will result in a logged error
+              -> String                    -- A prefix to append to the error
+              -> WriterT String IO ()
+logFileErrors cmdParts wantFile validFile errPrefix = do
+  badFiles <- filterM (fmap not . lift . validFile) $ mapMaybe wantFile cmdParts
+  mapM_ (tell . makeError) badFiles
   where
-    inputs = mapMaybe inputFileName cmdParts
-    dirs = mapMaybe outputDirName cmdParts
-    outPaths = mapMaybe outputPath cmdParts
-    dirDests = map takeDirectory dirs
-    filterNotM p = filterM (fmap not . p)
-    makeError prefix f = return (prefix ++ f ++ "\n")
+    makeError f = errPrefix ++ f ++ "\n"
+
+checkLocations :: TmpSettings -> [CmdPart] -> IO ()
+checkLocations s cmdParts =
+  let doLog = logFileErrors cmdParts
+  in unless (ignoreErrors s) $ do
+    (_,e) <- runWriterT $ do
+      doLog inputFileName doesPathExist "File does not exist: "
+      doLog (fmap takeDirectory . outputDirName) doesDirectoryExist "Directory does not exist: "
+      doLog outputPath (fmap not . doesPathExist) "Destination is an existing filesystem object: "
+    unless (null e) $ errorWithoutStackTrace $
+        "\n" ++ e ++ "\nFix these errors or use --ignore-errors to suppress them\n"
 
 rewriteCmdParts :: TmpSettings -> [CmdPart] -> String
 rewriteCmdParts settings cmdParts = intercalate " ; " $
@@ -164,4 +174,4 @@ main = do
     Nothing -> fmap lines getContents
     Just template -> returnIO [template]
   out <- mapM (rewrite settings) ls
-  putStrLn $ intercalate "\n" out
+  putStrLn $ unlines out
