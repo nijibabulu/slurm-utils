@@ -36,7 +36,6 @@ $ slurmtasks tasks.txt
 #SBATCH --array=1-2
 #SBATCH --mem=3
 #SBATCH --nice=0
-#SBATCH --job-name=job
 case ${SLURM_ARRAY_TASK_ID} in
     1)
         echo "Job ${SLURM_JOB_ID}.${SLURM_ARRAY_TASK_ID} started on ${HOSTNAME} at $(date)"
