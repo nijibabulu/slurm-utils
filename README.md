@@ -1,16 +1,40 @@
 # Slurm Utilities
 
-This package provides a pair of utilities for submitting jobs to the SLURM cluster:
+This package provides a pair of utilities for submitting jobs to a SLURM cluster:
   - [`slurmtasks`](#slurmtasks) - creates a SLURM script from a file (or `stdin`) containing a list of tasks, one per line. 
   - [`tmprewrite`](#tmprewrite) - rewrites a list of tasks to be executed in the temporary directory, avoiding IO overload on NFS.
+  
+The default behavior has been designed and maintained with the [LiSC](http://cube.univie.ac.at/lisc) cluster in mind, but are general tools for generating scripts for a slurm-based workload manager.
   
 Together, they form a pipeline which can be used to easily submit jobs to a slurm cluster:
 
 ```
 $ echo "gzip -c smallfile.txt > smallfile.txt.gz" | slurmtasks | sbatch
 Submitted batch job 580886
+```
+
+Execute your job in temporary space only:
+
+```
 $ echo "gzip -c {largefile.txt:i} > {largefile.txt.gz:o}" | tmprewrite | slurmtasks | sbatch
 Submitted batch job 580887
+```
+
+Submit multiple tasks:
+
+```
+$ for f in dir_with_largefiles; do echo "gzip -c {$f:i} > {$f:o}"; done | tmprewrite | slurmtasks | sbatch
+Submitted batch job 580888
+```
+
+For details, see `slurmtasks --help` or `tmprewrite --help` or see below.
+
+## Installing
+
+For users of LiSC, current versions executables are available in `/proj/rpz/slurmbin/`. For everyone else, clone this repository and, if you haven't already, install [stack](https://docs.haskellstack.org/en/stable/README/). In the source directory, run 
+
+```
+stack install
 ```
   
 ## slurmtasks
@@ -155,8 +179,8 @@ For more information, run `slurmtasks --help`
 
 `tmprewrite` makes the process of turning commands from a pipeline into a straightforward, less error-prone task. It also works well with `slurmtasks`. One just needs to decorate the names of files to transfer with braces and an indicator of which kind:
 
-- `{file:i}` indicates `file` is an input file.
-- `{file:o}` indicates `file` is an output file to be created by the command.
+- `{infile:i}` indicates `infile` is an input file.
+- `{outfile:o}` indicates `outfile` is an output file to be created by the command.
 - `{dir:d}` indcates `dir` is an output directory that should be present prior to running the command. It will be created.
 
 For example,
