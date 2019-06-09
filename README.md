@@ -23,7 +23,7 @@ Submitted batch job 580887
 Submit multiple tasks:
 
 ```
-$ for f in dir_with_largefiles; do echo "gzip -c {$f:i} > {$f:o}"; done | tmprewrite | slurmtasks | sbatch
+$ for f in dir_with_largefiles; do echo "gzip -c {$f:i} > {$f.gz:o}"; done | tmprewrite | slurmtasks | sbatch
 Submitted batch job 580888
 ```
 
