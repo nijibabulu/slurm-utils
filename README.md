@@ -26,7 +26,7 @@ echo "task2"
 
 Running slurmtasks with this file as input 
 ```
-$ slurmtasks -f tasks.txt
+$ slurmtasks tasks.txt
 #!/bin/bash
 #
 #SBATCH --output=./job.o%A.%a
