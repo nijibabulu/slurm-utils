@@ -24,18 +24,18 @@ buildScript pl tasks = let
      buildHeader h tasks = scriptLines $
          [ shebangBash
          , comment ""
-         , slurmOutput (logdir h </> name h ++ ".o%A.%a")
-         , slurmError (logdir h </> name h ++ ".e%A.%a")
+         , slurmOutput (logdir h </> "%x.o%A.%a")
+         , slurmError (logdir h </> "%x.e%A.%a")
          , (slurmCpu . show) (cpus h)
          , (slurmArray . ("1-"++) . show) (length tasks)
          , (slurmMem . show . (1000*)) (mem h)
          , (slurmNice . show) (nice h)
-         , slurmName (name h)
          , slurmPartition (partition h)
          , slurmConstraint (features h)
          ] ++
          catMaybes [
              slurmNodes . ("1-"++) . show <$> limit h
+           , slurmName <$> (name h)
            , slurmChdir <$> workdir h
            , slurmLicense <$> license h
          ]

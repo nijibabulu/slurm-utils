@@ -20,8 +20,8 @@ data SlurmScriptProlog = SlurmScriptProlog
     , mem :: Int
     , partition :: String
     , nice :: Int
-    , name :: String
     , features :: String
+    , name :: Maybe String
     , workdir :: Maybe FilePath
     , limit :: Maybe Int
     , license :: Maybe String
@@ -54,13 +54,12 @@ slurmScriptParser =
                 (long "nice" <> metavar "N" <> value 0 <> showDefault
               <> help "The \"nice\" value of the job (higher means lower priority)")
         <*> strOption
-                (long "name" <> short 'n' <> value "job" <> showDefault
-              <> help "The name of the job")
-        <*> strOption
                 (long "features" <> short 'f' <> value "array-1core" <> showDefault
-                <> help ("The required features of the nodes you will be submitting to. "
+              <> help ("The required features of the nodes you will be submitting to. "
                     ++ "These can be combined in ways such as array-8core&localmirror. "
                     ++ "See the slurm manual for more information."))
+        <*> optional (strOption
+              (long "name" <> short 'n' <> help "The name of the job"))
         <*> optional (strOption
                 (long "workdir" <> metavar "DIR"
             <> help "Specify a working directory for the jobs on the remote node"))
@@ -77,7 +76,7 @@ optParser = SlurmScriptSettings
         <*> option auto (long "group-by" <> short 'g' <> value 1 <> showDefault)
         <*> flag True False (long "no-ulimit" <> short 'u')
         <*> switch (long "ignore-errors")
-        <*> optional (argument auto (metavar "TASKFILE"))
+        <*> optional (strArgument (metavar "TASKFILE"))
 
 parserInfo :: ParserInfo SlurmScriptSettings
 parserInfo = info
