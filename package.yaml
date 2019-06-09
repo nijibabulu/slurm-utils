@@ -32,7 +32,7 @@ github: nijibabulu/slurm-utils
 license: BSD3
 executables:
   tmprewrite:
-    source-dirs: tmp_rewrite
+    source-dirs: tmprewrite
     main: Main.hs
     ghc-options:
     - -threaded
