@@ -9,9 +9,9 @@ import System.FilePath.Posix
 import SlurmTasksOpts
 import ScriptBuilder
 
-buildScript :: SlurmScriptProlog -> [String] -> String
-buildScript pl tasks = let
-     buildTask task = scriptLines $
+buildScript :: SlurmScriptSettings -> [String] -> String
+buildScript SlurmScriptSettings{prolog=pl, shortTasks=short} tasks = let
+     buildTask False task = scriptLines $
          [ quotedEchoStmt "Job ${SLURM_JOB_ID}.${SLURM_ARRAY_TASK_ID} started on ${HOSTNAME} at $(date)"
          , quotedEchoStmt "  <Command>"
          ] ++
@@ -21,6 +21,7 @@ buildScript pl tasks = let
          , ifTestStmt (scriptStmt "$? -ne 0") (redirOutErr (quotedEchoStmt "Your program exited with error $?"))
          , quotedEchoStmt "Job ${SLURM_JOB_ID}.${SLURM_ARRAY_TASK_ID} finished on ${HOSTNAME} at $(date)"
          ]
+     buildTask True task = scriptStmt task
      buildHeader h tasks = scriptLines $
          [ shebangBash
          , comment ""
@@ -42,7 +43,7 @@ buildScript pl tasks = let
      in show $ scriptLines
          [ buildHeader pl tasks
          , scriptStmt ""
-         , caseBlock "${SLURM_ARRAY_TASK_ID}" (map show [1..]) (map (show . buildTask) tasks)
+         , caseBlock "${SLURM_ARRAY_TASK_ID}" (map show [1..]) (map (show . (buildTask short)) tasks)
          ]
 
 splitEvery :: Int -> [a] -> [[a]]
@@ -69,6 +70,6 @@ main = do
             (Just fn) -> readFile fn
     guard $ T.length (T.strip (T.pack contents)) > 0
     let tasks = processTasks opts (lines contents)
-    putStrLn $ buildScript (prolog opts) tasks
+    putStrLn $ buildScript opts tasks
 
 -- fromJust $ getParseResult $ execParserPure defaultPrefs ( info (slurmScriptParser  <**> helper) idm) []

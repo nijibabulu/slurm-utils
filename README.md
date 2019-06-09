@@ -29,8 +29,8 @@ Running slurmtasks with this file as input
 $ slurmtasks tasks.txt
 #!/bin/bash
 #
-#SBATCH --output=./job.o%A.%a
-#SBATCH --error=./job.e%A.%a
+#SBATCH --output=./%x.o%A.%a
+#SBATCH --error=./%x.e%A.%a
 #SBATCH --cpus-per-task=1
 #SBATCH --workdir=.
 #SBATCH --array=1-2
@@ -124,7 +124,31 @@ $ echo "sleep 10" | slurmtasks --name sleepy | sbatch
 $ echo "sleep 10" | slurmtasks | sbatch --job-name sleepy
 ```
 
-both do the same thing.
+both do basically the same thing.
+
+### Large Jobs
+
+With extremely large jobs, the `sbatch` command will choke with some uninformative error messages, such as:
+
+```
+sbatch: error: Batch job submission failed: Zero Bytes were transmitted or received
+```
+
+In these cases, it may be useful to split up your task list into several different jobs. Alternatively, you can slim down the script that `slurmtasks` outputs. By default, `echo` commands are inserted into every task to make the slurm output files more informative. However, this takes up a lot of extra per-task space. To remove this, use the `--short-tasks` option:
+
+```
+$ echo "echo hi" | stack exec slurmtasks  -- --name test --short-tasks
+#!/bin/bash
+#
+#SBATCH --output=./%x.o%A.%a
+...
+case ${SLURM_ARRAY_TASK_ID} in
+    1)
+        ulimit -v 3381000
+        echo hi
+    ;;
+esac
+```
 
 For more information, run `slurmtasks --help`
 
