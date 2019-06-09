@@ -1,11 +1,9 @@
 module Main where
 
 import Control.Monad
-import Control.Applicative (optional)
 import Data.List (intercalate)
 import Data.Maybe
 import qualified Data.Text as T
-import Options.Applicative
 import System.FilePath.Posix
 
 import SlurmTasksOpts

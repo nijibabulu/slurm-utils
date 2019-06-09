@@ -5,6 +5,8 @@ library:
   - optparse-applicative
   - directory
   - mtl
+  - regex-applicative
+  - filepath
 tests:
   slurm-utils-test:
     source-dirs: test
@@ -38,12 +40,6 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - slurm-utils
-    - text
-    - regex-applicative
-    - optparse-applicative
-    - filepath
-    - directory
-    - mtl
   slurmtasks:
     source-dirs: slurmtasks
     main: Main.hs
