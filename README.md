@@ -6,7 +6,7 @@ This package provides a pair of utilities for submitting jobs to a SLURM cluster
   
 The default behavior has been designed and maintained with the [LiSC](http://cube.univie.ac.at/lisc) cluster in mind, but are general tools for generating scripts for a slurm-based workload manager.
   
-Together, they form a pipeline which can be used to easily submit jobs to a slurm cluster:
+Together, they form a pipeline which can be used to easily submit jobs to a slurm cluster. Here's an example submitting a simple task, converting it to a slurm-formatted script, and submitting it to the cluster:
 
 ```
 $ echo "gzip -c smallfile.txt > smallfile.txt.gz" | slurmtasks | sbatch
@@ -103,6 +103,8 @@ case ${SLURM_ARRAY_TASK_ID} in
     ;;
 esac
 ```
+
+### Error checking
 
 Additionally, `slurmtasks` will check for the existence of the specified output and working directories, to protect against submitting a job which cannot be run:
 
