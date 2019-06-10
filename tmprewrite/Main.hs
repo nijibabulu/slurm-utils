@@ -13,4 +13,4 @@ main = do
     Nothing -> fmap lines getContents
     Just template -> returnIO [template]
   out <- mapM (rewrite settings) ls
-  putStrLn $ unlines out
+  putStr $ unlines out
