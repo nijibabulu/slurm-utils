@@ -4,7 +4,7 @@ module TmpRewrite (
 where
 
 import           Control.Monad.Writer.Strict
-import           Data.List ( groupBy, intercalate, uncons )
+import           Data.List ( groupBy, intercalate, nub, uncons )
 import           Data.Maybe
 import           System.Directory
 import           System.FilePath.Posix
@@ -84,7 +84,7 @@ mkdirRewrite s cmdParts =
 
 cpRewrite :: TmpSettings -> [CmdPart] -> Maybe String
 cpRewrite s cmdParts =
-  let inputs = mapMaybe inputFileName cmdParts
+  let inputs = nub $ mapMaybe inputFileName cmdParts
       cpRewrite' [] _ = Nothing
       cpRewrite' _ "test" = Nothing
       cpRewrite' fs _ = Just $ lockedCopy s $ unwords ([cpcmd s] ++ fs ++ [tmploc s])
@@ -99,7 +99,7 @@ cmdRewrite s cmdParts = Just $ concatMap rewritePart cmdParts
 
 cpBackRewrite :: TmpSettings -> [CmdPart] -> Maybe String
 cpBackRewrite s cmdParts =
-  let outputs = mapMaybe outputPath cmdParts
+  let outputs = nub $ mapMaybe outputPath cmdParts
       outputSources = map (rewriteToTmp s) outputs
       outputDests = map takeDirectory outputs
       cpBackCmd src dest = unwords [cpcmd s, src, dest]
