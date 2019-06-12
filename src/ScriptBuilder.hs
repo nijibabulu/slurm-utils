@@ -1,8 +1,8 @@
 module ScriptBuilder  where
 
-import Prelude hiding ((<$>))
 import Data.List
-import Text.PrettyPrint.ANSI.Leijen
+import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
+import qualified Text.PrettyPrint.ANSI.Leijen as P ((<$>))
 
 bump :: Doc -> Doc
 bump = indent 4
@@ -23,23 +23,23 @@ quotedEchoStmt arg = echoStmt_ $ dquotes $ text arg
 hardQuotedEchoStmt arg = echoStmt_ $ squotes $ text $ concatMap (\x -> if x == '\'' then "'\"'\"'\"'" else [x]) arg
 
 redir :: String -> Doc -> Doc
-redir s d = d <+> text s 
+redir s d = d <+> text s
 redirOutErr = redir "1>&2"
 redirErrOut = redir "2>&1"
 
 ifStmt, ifTestStmt :: Doc -> Doc -> Doc
-ifStmt cond body = text "if " <+> cond <+> text "; then" <$> (bump  body) <$> text "fi"
-ifTestStmt cond body = ifStmt (text "[ " <+> cond <+> text " ]") body
+ifStmt cond body = text "if " <+> cond <+> text "; then" P.<$> bump  body P.<$> text "fi"
+ifTestStmt cond  = ifStmt (text "[ " <+> cond <+> text " ]")
 
 caseStmt :: String -> String -> Doc
 caseStmt pat cmd =
-    text (pat ++ ")") <$> (bump $ vsep $ map text $ lines cmd) <$> text ";;"
+    text (pat ++ ")") P.<$> bump (vsep $ map text $ lines cmd) P.<$> text ";;"
 
 caseBlock :: String -> [String] -> [String] -> Doc
 caseBlock v pats cmds =
         text ("case " ++ v ++ " in")
-    <$> bump (vsep (map (uncurry caseStmt) (zip pats cmds)))
-    <$> text "esac"
+  P.<$> bump (vsep (zipWith caseStmt pats cmds))
+  P.<$> text "esac"
 
 shebangBash :: Doc
 shebangBash = shebang "/bin/bash"

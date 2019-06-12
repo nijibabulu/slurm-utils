@@ -112,12 +112,6 @@ cpBackRewrite s cmdParts =
             [] -> Nothing
             _ -> Just cpBacks
 
-reportErrors :: Bool -> String -> IO ()
-reportErrors True _ = return ()
-reportErrors _ "" = return ()
-reportErrors False s = error $ "\n" ++ s ++
-  "\nFix these errors or use --ignore-errors to suppress them\n"
-
 {-|
    @'logFileErrors' cmdParts wantFile validFile errPrefix@ logs errors for
    particular types of files. All @cmdParts@ resulting in @Just@ in

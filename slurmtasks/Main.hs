@@ -36,14 +36,14 @@ buildScript SlurmScriptSettings{prolog=pl, shortTasks=short} tasks = let
          ] ++
          catMaybes [
              slurmNodes . ("1-"++) . show <$> limit h
-           , slurmName <$> (name h)
+           , slurmName <$> name h
            , slurmChdir <$> workdir h
            , slurmLicense <$> license h
          ]
      in show $ scriptLines
          [ buildHeader pl tasks
          , scriptStmt ""
-         , caseBlock "${SLURM_ARRAY_TASK_ID}" (map show [1..]) (map (show . (buildTask short)) tasks)
+         , caseBlock "${SLURM_ARRAY_TASK_ID}" (map show [1..]) (map (show . buildTask short) tasks)
          ]
 
 splitEvery :: Int -> [a] -> [[a]]
