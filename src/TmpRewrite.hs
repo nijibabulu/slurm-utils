@@ -105,7 +105,7 @@ cpBackRewrite s cmdParts =
       cpBackCmd src dest = unwords [cpcmd s, src, dest]
       cpBacks =
         intercalate " ; " $ zipWith cpBackCmd outputSources outputDests
-      in if(mode s == "test" || null cpBacks) then Nothing else Just cpBacks
+      in guard(mode s /= "test" && (not . null) cpBacks) >> Just cpBacks
 
 {-|
    @'logFileErrors' cmdParts wantFile validFile errPrefix@ logs errors for
