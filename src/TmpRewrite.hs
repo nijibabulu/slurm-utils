@@ -114,7 +114,7 @@ cpBackRewrite s cmdParts =
    is written to the writer monad with @errPrefix@ as a prefix.
 -}
 logFileErrors :: [CmdPart]                 -- Parts of the parsed command
-              -> (CmdPart -> Maybe String) -- Predicate for parts of the commands to check
+              -> (CmdPart -> Maybe String) -- Predicate for parts of the commands to verify
               -> (FilePath -> IO Bool)     -- File validator; a False result will result in a logged error
               -> String                    -- A prefix to append to the error
               -> WriterT String IO ()
@@ -132,6 +132,7 @@ checkLocations s cmdParts =
       doLog inputFileName doesPathExist "File does not exist: "
       doLog (fmap takeDirectory . outputDirName) doesDirectoryExist "Directory does not exist: "
       doLog outputPath (fmap not . doesPathExist) "Destination is an existing filesystem object: "
+      doLog (fmap takeDirectory . outputPath) doesDirectoryExist "Output file destination does not exist: "
     unless (null e) $ errorWithoutStackTrace $
         "\n" ++ e ++ "\nFix these errors or use --ignore-errors to suppress them\n"
 
