@@ -3,11 +3,16 @@ module Main where
 import Control.Monad
 import Data.List (intercalate)
 import Data.Maybe
+import Data.Version (showVersion)
 import qualified Data.Text as T
+import GHC.Base (when)
+import System.Exit
 import System.FilePath.Posix
 
 import SlurmTasksOpts
 import ScriptBuilder
+
+import Paths_slurm_utils (version)
 
 buildScript :: SlurmScriptSettings -> [String] -> String
 buildScript SlurmScriptSettings{prolog=pl, shortTasks=short} tasks = let
@@ -65,6 +70,9 @@ processTasks opts tasks =
 main = do
     opts <- parseSlurmTasksOpts
     verifySlurmTasksOpts opts
+    when (displayVersion opts) $ do
+        putStrLn $ "slurmtasks v" ++ (showVersion version)
+        exitSuccess
     contents <- case file opts of
             Nothing -> getContents
             (Just fn) -> readFile fn

@@ -33,6 +33,7 @@ data SlurmScriptSettings = SlurmScriptSettings
     , ulimit :: Bool
     , ignoreErrors :: Bool
     , shortTasks :: Bool
+    , displayVersion :: Bool
     , file :: Maybe String
     }
 
@@ -78,6 +79,7 @@ optParser = SlurmScriptSettings
         <*> flag True False (long "no-ulimit" <> short 'u')
         <*> switch (long "ignore-errors")
         <*> switch (long "short-tasks" <> help "make tasks brief (no echo output of the task command)")
+        <*> switch (long "version" <> short 'v' <> help "Display version and exit")
         <*> optional (strArgument (metavar "TASKFILE"))
 
 parserInfo :: ParserInfo SlurmScriptSettings

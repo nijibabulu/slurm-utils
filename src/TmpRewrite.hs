@@ -1,5 +1,6 @@
 module TmpRewrite (
     rewrite
+  , parseCmd
 )
 where
 
@@ -124,15 +125,15 @@ logFileErrors cmdParts wantFile validFile errPrefix = do
   where
     makeError f = errPrefix ++ f ++ "\n"
 
-checkLocations :: TmpSettings -> [CmdPart] -> IO ()
-checkLocations s cmdParts =
-  let doLog = logFileErrors cmdParts
-  in unless (ignoreErrors s) $ do
-    (_,e) <- runWriterT $ do
-      doLog inputFileName doesPathExist "File does not exist: "
-      doLog (fmap takeDirectory . outputDirName) doesDirectoryExist "Directory does not exist: "
-      doLog outputPath (fmap not . doesPathExist) "Destination is an existing filesystem object: "
-      doLog (fmap takeDirectory . outputPath) doesDirectoryExist "Output file destination does not exist: "
+checkLocations :: [[CmdPart]] -> IO ()
+checkLocations cmds =
+  let checkCmdLocations cmd = do
+        logFileErrors cmd inputFileName doesPathExist "File does not exist: "
+        logFileErrors cmd (fmap takeDirectory . outputDirName) doesDirectoryExist "Directory does not exist: "
+        logFileErrors cmd outputPath (fmap not . doesPathExist) "Destination is an existing filesystem object: "
+        logFileErrors cmd (fmap takeDirectory . outputPath) doesDirectoryExist "Output file destination does not exist: "
+  in do
+    (_,e) <- runWriterT $ mapM checkCmdLocations cmds
     unless (null e) $ errorWithoutStackTrace $
         "\n" ++ e ++ "\nFix these errors or use --ignore-errors to suppress them\n"
 
@@ -145,8 +146,8 @@ rewriteCmdParts settings cmdParts = intercalate " ; " $
               , cpBackRewrite
               ]
 
-rewrite :: TmpSettings -> String -> IO String
-rewrite settings cmd = do
-  parsedCmd <- either error return $ parseCmd cmd
-  checkLocations settings parsedCmd
-  return $ rewriteCmdParts settings parsedCmd
+rewrite :: TmpSettings -> [String] -> IO [String]
+rewrite settings cmds = do
+  parsedCmds <- mapM (either error return . parseCmd) cmds
+  unless (ignoreErrors settings) $ checkLocations parsedCmds
+  return $ map (rewriteCmdParts settings) parsedCmds

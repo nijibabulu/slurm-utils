@@ -18,6 +18,7 @@ data TmpSettings = TmpSettings
   , cpcmd :: String
   , lockfile :: String
   , ignoreErrors :: Bool
+  , displayVersion :: Bool
   , cmd :: Maybe String
   } deriving (Show)
 
@@ -53,6 +54,9 @@ tmpOptions =
           (  long "ignore-errors"
           <> help "Do not check for missing files before rewriting"
           )
+    <*> switch
+          (  long "version" <> short 'v'
+          <> help "Display version oand exit")
     <*> optional (argument str (metavar "TASK_TEMPLATE"))
 
 
