@@ -5,14 +5,19 @@ module SlurmTasksOpts (
     , verifySlurmTasksOpts
 ) where
 
-import Control.Monad (unless)
-import Control.Monad.Trans
-import Control.Monad.Writer.Strict
-import Data.List (intercalate)
+import Control.Monad ( unless )
+import Control.Monad.Trans.Class
+import Control.Monad.Trans.Maybe
+import Control.Monad.Trans.Writer.Strict
+import Control.Monad.IO.Class (liftIO)
 import Options.Applicative
+import Options.Applicative.Help.Pretty
+import System.IO (hPutStrLn, stderr)
 import System.IO.Error
 import System.Directory
 
+import SlurmPresets
+import Utils
 
 data SlurmScriptProlog = SlurmScriptProlog
     { logdir :: FilePath
@@ -33,30 +38,40 @@ data SlurmScriptSettings = SlurmScriptSettings
     , ulimit :: Bool
     , ignoreErrors :: Bool
     , shortTasks :: Bool
+    , preset :: Maybe String
     , displayVersion :: Bool
     , file :: Maybe String
     }
 
-slurmScriptParser :: Parser SlurmScriptProlog
-slurmScriptParser =
+mkSlurmScriptParser :: SlurmScriptProlog -> Parser SlurmScriptProlog
+mkSlurmScriptParser (SlurmScriptProlog  logdirVal
+                                        cpusVal
+                                        memVal
+                                        partitionVal
+                                        niceVal
+                                        featuresVal
+                                        nameVal
+                                        workdirVal
+                                        limitVal
+                                        licenseVal ) =
     SlurmScriptProlog
         <$> strOption
-                (long "logdir" <> short 'o' <> metavar "DIR" <> value "." <> showDefault
+                (long "logdir" <> short 'o' <> metavar "DIR" <> value logdirVal <> showDefault
               <> help "Directory in which to place output and error files")
         <*> option auto
-                (long "cpus" <> short 'c' <> metavar "N" <> value 1 <> showDefault
+                (long "cpus" <> short 'c' <> metavar "N" <> value cpusVal <> showDefault
               <> help "How many CPUs to request")
         <*> option auto
-                (long "mem" <> short 'm' <> metavar "GB" <> value 3 <> showDefault
+                (long "mem" <> short 'm' <> metavar "GB" <> value memVal <> showDefault
               <> help "How much memory (in GB) to request")
         <*> strOption
-                (long "partition" <> value "basic" <> showDefault
+                (long "partition" <> value partitionVal <> showDefault
               <> help "Which partition to request")
         <*> option auto
-                (long "nice" <> metavar "N" <> value 0 <> showDefault
+                (long "nice" <> metavar "N" <> value niceVal <> showDefault
               <> help "The \"nice\" value of the job (higher means lower priority)")
         <*> strOption
-                (long "features" <> short 'f' <> value "array-1core" <> showDefault
+                (long "features" <> short 'f' <> value featuresVal <> showDefault
               <> help ("The required features of the nodes you will be submitting to. "
                     ++ "These can be combined in ways such as array-8core&localmirror. "
                     ++ "See the slurm manual for more information."))
@@ -72,19 +87,42 @@ slurmScriptParser =
                 (long "license" <> short 'l'
               <> help "License to give the job, e.g. \"scratch-highio\"."))
 
-optParser :: Parser SlurmScriptSettings
-optParser = SlurmScriptSettings
-        <$> slurmScriptParser
+defaultSlurmScriptProlog :: SlurmScriptProlog
+defaultSlurmScriptProlog =
+    SlurmScriptProlog { logdir="."
+                    , cpus=1
+                    , mem=3
+                    , partition="basic"
+                    , nice=0
+                    , features="array-1core"
+                    , name=Nothing
+                    , workdir=Nothing
+                    , limit=Nothing
+                    , license=Nothing
+                    }
+
+optParser :: SlurmScriptProlog -> PresetInfo -> Parser SlurmScriptSettings
+optParser prolog pi = SlurmScriptSettings
+        <$> mkSlurmScriptParser prolog
         <*> option auto (long "group-by" <> short 'g' <> value 1 <> showDefault)
         <*> flag True False (long "no-ulimit" <> short 'u')
         <*> switch (long "ignore-errors")
         <*> switch (long "short-tasks" <> help "make tasks brief (no echo output of the task command)")
+        <*> optional (strOption (long "preset" <> short 'p' <> helpDoc (Just (presetDoc pi))))
         <*> switch (long "version" <> short 'v' <> help "Display version and exit")
         <*> optional (strArgument (metavar "TASKFILE"))
 
-parserInfo :: ParserInfo SlurmScriptSettings
-parserInfo = info
-    ( optParser <**> helper)
+presetDoc :: PresetInfo -> Doc
+presetDoc pi = paragraph presetText <> availablePresetsDoc pi
+    where
+        presetText = "Use preset groups of options, builtin or included in "
+                  ++ userFilePath pi ++ "."
+
+
+
+parserInfo :: SlurmScriptProlog -> PresetInfo -> ParserInfo SlurmScriptSettings
+parserInfo prolog pi = info
+    ( optParser prolog pi <**> helper)
     ( header "Construct a slurm script out of a list of tasks."
     <> progDesc
         (  "Convert a list of tasks into a longer form script "
@@ -95,14 +133,37 @@ parserInfo = info
     <> fullDesc
     )
 
+handlePreset :: SlurmScriptSettings -> PresetInfo -> MaybeT IO SlurmScriptSettings
+handlePreset settings pi = do
+    pt <- (MaybeT . return) $ preset settings
+    let mp = findPreset pi pt
+    case mp of
+        Nothing -> errorWithoutStackTrace $
+            "\n\nError: cannot find preset: " ++ pt ++ "\n\n" ++
+            showDoc (availablePresetsDoc pi)
+        Just p -> case execParserPure defaultPrefs (parserInfo defaultSlurmScriptProlog pi) (args p) of
+                    Success r -> liftIO $ execParser (parserInfo (prolog r) pi)
+                    Failure l -> liftIO $ do
+                        hPutStrLn stderr "Error: Cannot parse preset"
+                        handleParseResult (Failure l)
+
+fetchPreset :: PresetInfo -> String -> IO SlurmScriptSettings
+fetchPreset pi pn = do
+    p <- findPreset pi pn
+    settings <- parsePresetArgs p (parserInfo defaultSlurmScriptProlog pi)
+    execParser (parserInfo (prolog settings) pi)
+
 parseSlurmTasksOpts :: IO SlurmScriptSettings
-parseSlurmTasksOpts =  execParser parserInfo
+parseSlurmTasksOpts = do
+    pi <- presetInfo
+    settings <- execParser (parserInfo defaultSlurmScriptProlog pi)
+    maybe (return settings) (fetchPreset pi) (preset settings)
 
 verifyDir :: String -> String -> WriterT String IO ()
-verifyDir t d = do 
+verifyDir t d = do
     r <- (lift . tryIOError) $ writable <$> getPermissions d
-    case r of 
-        Left e 
+    case r of
+        Left e
             | isDoesNotExistError e -> tell $ unwords [t, "directory", d, "does not exist\n"]
             | otherwise -> (lift . ioError) e
         Right False -> tell $ unwords ["Insufficient permissions to write to", t, "directory", d, "\n"]
@@ -110,7 +171,7 @@ verifyDir t d = do
 
 verifySlurmTasksOpts :: SlurmScriptSettings -> IO ()
 verifySlurmTasksOpts SlurmScriptSettings{prolog=pl, ignoreErrors=skip} =
-    unless skip $ do 
+    unless skip $ do
         (_,e) <- runWriterT $ do
             verifyDir "log" (logdir pl)
             maybe ((lift . return) ()) (verifyDir "working") (workdir pl)

@@ -4,14 +4,15 @@ module TmpRewrite (
 )
 where
 
-import           Control.Monad.Writer.Strict
-import           Data.List ( groupBy, intercalate, nub, uncons )
-import           Data.Maybe
-import           System.Directory
-import           System.FilePath.Posix
-import           System.IO ( stdin )
-import           Text.Regex.Applicative
-import           TmpRewriteOpts
+import Control.Monad
+import Control.Monad.Trans.Class
+import Control.Monad.Trans.Writer
+import Data.List ( intercalate, nub, uncons )
+import Data.Maybe
+import System.Directory
+import System.FilePath.Posix
+import Text.Regex.Applicative
+import TmpRewriteOpts
 
 data CmdPart =   Rest {rest :: String}     -- a non-translated string of the command
                | InputFile String          -- an input file

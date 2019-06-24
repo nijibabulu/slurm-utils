@@ -1,6 +1,5 @@
 module ScriptBuilder  where
 
-import Data.List
 import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
 import qualified Text.PrettyPrint.ANSI.Leijen as P ((<$>))
 

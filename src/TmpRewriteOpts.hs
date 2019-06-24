@@ -11,6 +11,8 @@ import Data.List (intercalate)
 import Options.Applicative 
 import Options.Applicative.Help.Pretty
 
+import Utils
+
 data TmpSettings = TmpSettings
   { mode :: String
   , wait :: Integer
@@ -22,8 +24,6 @@ data TmpSettings = TmpSettings
   , cmd :: Maybe String
   } deriving (Show)
 
-paragraph :: String -> Doc
-paragraph = fillSep . map text . words
 
 tmpOptions :: Parser TmpSettings
 tmpOptions =

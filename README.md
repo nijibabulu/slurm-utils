@@ -104,6 +104,29 @@ case ${SLURM_ARRAY_TASK_ID} in
 esac
 ```
 
+
+### Presets
+
+Many SLURM options go hand in hand, for instance an increase in the number of cores requested often implies that more memory should be requested. Presets make it easy to specify these changes together. You may use the builtin presets:
+
+```
+Available presets:
+  8core: --mem 64 --cpus 8 --features array-8core
+  himem: --mem 1000 --cpus 40 --features ''
+```
+
+and specify your own in `$HOME/.config/slurm-utils/slurmtasks.yml`. The format of this file should be as above, with one preset per line, a colon separating the name of the preset and the options it implies. You may also tweak the preset options by overriding them on the command line:
+
+```
+$ echo "my_8core_memoryhog.sh" | slurmtasks --preset 8core --mem 100
+# ...
+#SBATCH --cpus-per-task=8
+#SBATCH --array=1-1
+#SBATCH --mem=100000
+# ...
+#SBATCH --constraint=array-8core
+```
+
 ### Error checking
 
 Additionally, `slurmtasks` will check for the existence of the specified output and working directories, to protect against submitting a job which cannot be run:

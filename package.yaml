@@ -4,9 +4,12 @@ library:
   - ansi-wl-pprint
   - optparse-applicative
   - directory
-  - mtl
+  - transformers
+  - safe-exceptions
   - regex-applicative
   - filepath
+  ghc-options:
+  - -Wunused-imports
 tests:
   slurm-utils-test:
     source-dirs: test
@@ -23,7 +26,7 @@ dependencies:
 - optparse-applicative
 - base >= 4.7 && < 5
 name: slurm-utils
-version: 0.1.0.0
+version: 0.2.0.0
 extra-source-files:
 - README.md
 - ChangeLog.md
@@ -38,6 +41,7 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -Wunused-imports
     dependencies:
     - slurm-utils
   slurmtasks:
@@ -47,6 +51,7 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -Wunused-imports
     dependencies:
     - slurm-utils
     - optparse-applicative
