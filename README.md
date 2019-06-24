@@ -115,16 +115,16 @@ Available presets:
   himem: --mem 1000 --cpus 40 --features ''
 ```
 
-and specify your own in `$HOME/.config/slurm-utils/slurmtasks.yml`. The format of this file should be as above, with one preset per line, a colon separating the name of the preset and the options it implies. You may also tweak the preset options by overriding them on the command line:
+and specify your own in `$HOME/.config/slurm-utils/slurmtasks.yml`. The format of this file should be as above, with one preset per line, a colon separating the name of the preset and the options it entails. You may also tweak the preset options by overriding them on the command line:
 
 ```
 $ echo "my_8core_memoryhog.sh" | slurmtasks --preset 8core --mem 100
 # ...
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=8          # (from preset: --cpus 8)
 #SBATCH --array=1-1
-#SBATCH --mem=100000
+#SBATCH --mem=100000               # (from preset: --mem 64 -> overridden: --mem 100)
 # ...
-#SBATCH --constraint=array-8core
+#SBATCH --constraint=array-8core   # (from preset: --features array-8core)
 ```
 
 ### Error checking
