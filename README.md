@@ -120,11 +120,11 @@ and specify your own in `$HOME/.config/slurm-utils/slurmtasks.yml`. The format o
 ```
 $ echo "my_8core_memoryhog.sh" | slurmtasks --preset 8core --mem 100
 # ...
-#SBATCH --cpus-per-task=8          # (from preset: --cpus 8)
+#SBATCH --cpus-per-task=8          # (from 8core preset: --cpus 8)
 #SBATCH --array=1-1
-#SBATCH --mem=100000               # (from preset: --mem 64 -> overridden: --mem 100)
+#SBATCH --mem=100000               # (from 8core preset: --mem 64 -> overridden: --mem 100)
 # ...
-#SBATCH --constraint=array-8core   # (from preset: --features array-8core)
+#SBATCH --constraint=array-8core   # (from 8core preset: --features array-8core)
 ```
 
 ### Error checking
