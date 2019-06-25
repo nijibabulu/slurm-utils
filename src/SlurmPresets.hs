@@ -75,7 +75,7 @@ catchPresetError = catchJust fromPresetError
 
 builtinPresets :: [String]
 builtinPresets = ["8core: --mem 64 --cpus 8 --features array-8core",
-                  "himem: --mem 1000 --cpus 40 --features ''",
+                  "himem: --mem 1000 --cpus 40 --features '' --partition himem",
                   "log: --logdir logs"]
 
 availablePresetsDoc :: PresetInfo -> Doc
