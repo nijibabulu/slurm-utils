@@ -111,7 +111,7 @@ Many SLURM options go hand in hand, for instance an increase in the number of co
 
 ```
 Available presets:
-  log: --logdir log
+  log: --logdir logs
   8core: --mem 64 --cpus 8 --features array-8core
   himem: --mem 1000 --cpus 40 --features ''
 ```
@@ -128,7 +128,7 @@ $ echo "my_8core_memoryhog.sh" | slurmtasks --preset 8core --mem 100
 #SBATCH --constraint=array-8core   # (from 8core preset: --features array-8core)
 ```
 
-Presets can be combined by using a comma-separated list of presets. Settings will be applied from left to right, overriding previous presets. For instance `--preset log,8core` will output to the `logs/` directory and allocate an 8core job.
+Presets can be combined by using a comma-separated list of presets. Settings will be applied from left to right, successively overriding previous presets' settings. For instance `--preset log,8core` will output to the `logs/` directory and allocate an 8core job.
 
 ### Error checking
 
