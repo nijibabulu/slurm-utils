@@ -8,6 +8,7 @@ library:
   - safe-exceptions
   - regex-applicative
   - filepath
+  - split
   ghc-options:
   - -Wunused-imports
 tests:

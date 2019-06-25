@@ -5,14 +5,14 @@ module SlurmTasksOpts (
     , verifySlurmTasksOpts
 ) where
 
-import Control.Monad ( unless )
+import Control.Monad ( unless, foldM )
 import Control.Monad.Trans.Class
-import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.Writer.Strict
-import Control.Monad.IO.Class (liftIO)
+import Data.List.Split (splitOn)
+import Data.Maybe (fromJust)
 import Options.Applicative
+import Options.Applicative.Common (evalParser)
 import Options.Applicative.Help.Pretty
-import System.IO (hPutStrLn, stderr)
 import System.IO.Error
 import System.Directory
 
@@ -118,8 +118,6 @@ presetDoc pi = paragraph presetText <> availablePresetsDoc pi
         presetText = "Use preset groups of options, builtin or included in "
                   ++ userFilePath pi ++ "."
 
-
-
 parserInfo :: SlurmScriptProlog -> PresetInfo -> ParserInfo SlurmScriptSettings
 parserInfo prolog pi = info
     ( optParser prolog pi <**> helper)
@@ -133,25 +131,17 @@ parserInfo prolog pi = info
     <> fullDesc
     )
 
-handlePreset :: SlurmScriptSettings -> PresetInfo -> MaybeT IO SlurmScriptSettings
-handlePreset settings pi = do
-    pt <- (MaybeT . return) $ preset settings
-    let mp = findPreset pi pt
-    case mp of
-        Nothing -> errorWithoutStackTrace $
-            "\n\nError: cannot find preset: " ++ pt ++ "\n\n" ++
-            showDoc (availablePresetsDoc pi)
-        Just p -> case execParserPure defaultPrefs (parserInfo defaultSlurmScriptProlog pi) (args p) of
-                    Success r -> liftIO $ execParser (parserInfo (prolog r) pi)
-                    Failure l -> liftIO $ do
-                        hPutStrLn stderr "Error: Cannot parse preset"
-                        handleParseResult (Failure l)
-
+-- TODO: clean up access to the default settings
 fetchPreset :: PresetInfo -> String -> IO SlurmScriptSettings
 fetchPreset pi pn = do
-    p <- findPreset pi pn
-    settings <- parsePresetArgs p (parserInfo defaultSlurmScriptProlog pi)
+    ps <- mapM (findPreset pi) $ splitOn "," pn
+    settings <- foldM 
+                (\ss p -> parsePresetArgs (parserInfo (prolog ss) pi) p)
+                baseSettings
+                ps
     execParser (parserInfo (prolog settings) pi)
+    where
+        baseSettings = fromJust (evalParser (infoParser (parserInfo defaultSlurmScriptProlog (PresetInfo [] ""))))
 
 parseSlurmTasksOpts :: IO SlurmScriptSettings
 parseSlurmTasksOpts = do

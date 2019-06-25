@@ -75,7 +75,8 @@ catchPresetError = catchJust fromPresetError
 
 builtinPresets :: [String]
 builtinPresets = ["8core: --mem 64 --cpus 8 --features array-8core",
-                  "himem: --mem 1000 --cpus 40 --features ''"]
+                  "himem: --mem 1000 --cpus 40 --features ''",
+                  "log: --logdir logs"]
 
 availablePresetsDoc :: PresetInfo -> Doc
 availablePresetsDoc pi =  text "Available presets:" <> linebreak <>
@@ -116,8 +117,8 @@ presetInfo = do
             return $ catMaybes ps
 
 
-parsePresetArgs :: (MonadThrow m) => Preset -> ParserInfo a -> m a
-parsePresetArgs p parserInfo =
+parsePresetArgs :: (MonadThrow m) => ParserInfo a -> Preset -> m a
+parsePresetArgs parserInfo p =
     case execParserPure defaultPrefs parserInfo (args p) of
         Success res -> return res
         Failure f -> throw $ PresetInvalidOptions (show p) help
