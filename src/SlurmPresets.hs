@@ -105,7 +105,7 @@ presetInfo :: (MonadIO m, MonadThrow m) => m PresetInfo
 presetInfo = do
     path <- liftIO getUserPresetPath
     pathExists <- (liftIO . doesPathExist) path
-    users <- if pathExists then (liftIO . parsePresetFile) path else throw $ PresetUserFileNotFoundError path
+    users <- if pathExists then (liftIO . parsePresetFile) path else return [] -- throw $ PresetUserFileNotFoundError path
     let builtins = map (fromJust . match presetParser) builtinPresets
     return $ PresetInfo {presets = users ++ builtins, userFilePath=path}
     where
