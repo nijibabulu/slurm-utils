@@ -136,12 +136,12 @@ fetchPreset :: PresetInfo -> String -> IO SlurmScriptSettings
 fetchPreset pi pn = do
     ps <- mapM (findPreset pi) $ splitOn "," pn
     settings <- foldM 
-                (\ss p -> parsePresetArgs (parserInfo (prolog ss) pi) p)
+                (\sss p -> parsePresetArgs (parserInfo (prolog sss) pi) p)
                 baseSettings
                 ps
     execParser (parserInfo (prolog settings) pi)
     where
-        baseSettings = fromJust (evalParser (infoParser (parserInfo defaultSlurmScriptProlog (PresetInfo [] ""))))
+        baseSettings = fromJust (evalParser (optParser defaultSlurmScriptProlog pi))
 
 parseSlurmTasksOpts :: IO SlurmScriptSettings
 parseSlurmTasksOpts = do
