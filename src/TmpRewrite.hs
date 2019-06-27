@@ -13,9 +13,11 @@ import System.Directory
 import System.FilePath.Posix
 import Text.Regex.Applicative
 import TmpRewriteOpts
+import Utils
 
 data CmdPart =   Rest {rest :: String}     -- a non-translated string of the command
                | InputFile String          -- an input file
+               | IntermediateFile String   -- an intermediate file not to be copied back
                | OutputFile String         -- an output file
                | OutputDir String          -- an output directory
                | InvalidRewriteable String -- error state for the command parser
@@ -31,6 +33,7 @@ rewriteableToken c =  bracedToken $ string c
 cmdToken :: RE Char CmdPart
 cmdToken = (InputFile <$> rewriteableToken "i")
     <|> (OutputFile <$> rewriteableToken "o")
+    <|> (IntermediateFile <$> rewriteableToken "n")
     <|> (OutputDir <$> rewriteableToken "d")
     <|> (InvalidRewriteable <$> bracedToken (many anySym))
 
@@ -39,7 +42,7 @@ parseCmd s = let getRest r = guard ((not . null) r) >> [Rest r]
                  parseCmd' cs r s@(h:t) =
                   let next = findFirstPrefix cmdToken s in
                         case next of
-                          Just (InvalidRewriteable e, _) -> Left $ "Invalid rewriteable:" ++ e ++ "\n" ++ rewriteableDoc
+                          Just (InvalidRewriteable e, _) -> Left $ "Invalid rewriteable:" ++ e ++ "\n" ++ (showDoc rewriteableDoc)
                           Just (cmd, suf) -> parseCmd' (cs ++ getRest r ++ [cmd]) "" suf
                           Nothing -> parseCmd' cs (r ++ [h]) t
                  parseCmd' cs r "" = Right (cs ++ getRest r)
@@ -55,9 +58,10 @@ applyFileName fs x =
 inputFileName, outputFileName, outputDirName, rewriteableFileName, outputPath ::
     CmdPart -> Maybe String
 inputFileName x = case x of {(InputFile s) -> Just s; _ -> Nothing}
+intermediateFileName x = case x of {(IntermediateFile s) -> Just s; _ -> Nothing}
 outputFileName x = case x of {(OutputFile s) -> Just s; _ -> Nothing}
 outputDirName x = case x of {(OutputDir s) -> Just s; _ -> Nothing}
-rewriteableFileName =  applyFileName [inputFileName, outputFileName, outputDirName]
+rewriteableFileName =  applyFileName [inputFileName, intermediateFileName, outputFileName, outputDirName]
 outputPath = applyFileName [outputFileName, outputDirName]
 
 lockedCopy :: TmpSettings -> String -> String

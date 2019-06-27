@@ -67,9 +67,9 @@ modeHelpDoc =
   map
     paragraph
     [ "Running mode:"
-    , "test - create commands rewriting the filenames without copying."
+    , "test - write commands without rewriting to TMPDIR."
     , "nolock - copy to the temporary directory."
-    , "lock - include an flock on copy to the temporary directory."
+    , "lock - include a flock on copy to the temporary directory."
     ]
 
 choicesReader :: [String] -> ReadM String
@@ -79,17 +79,20 @@ choicesReader xs = eitherReader $ checkInput xs
             | input `elem` xs = Right input
             | otherwise = Left $ "Must choose one of " ++ intercalate ", " xs
 
-rewriteableDoc :: String
-rewriteableDoc = "Rewriteables use a formatting syntax of {INPUT:i} for input "
-              ++  "file INPUT, {DIR:d} for output directory DIR (DIR is created) "
-              ++  "and {OUTPUT:o} for output file OUTPUT."
+rewriteableDoc :: Doc
+rewriteableDoc = paragraph 
+                ("Rewriteables use a formatting syntax of {INPUT:i} for input "
+              ++ "file INPUT, {DIR:d} for output directory DIR (DIR is created) "
+              ++ "and {OUTPUT:o} for output file OUTPUT. Additionally, intermediate  "
+              ++ "files created in the temporary file space and not copied back are "
+              ++ "denoted as {INTERMEDIATE:n}.")
 
 tmprewriteDescDoc = vsep
   [ paragraph ("Automatically wrap a command with copies to and"
             ++ "from a temporary directory and rewrite the "
-            ++ "command to use files in the temporary directory. "
-            ++ rewriteableDoc
-            ++ "For example,")
+            ++ "command to use files in the temporary directory. ")
+ <> rewriteableDoc 
+ <> paragraph " For example,"
   , text ""
   , text  "tmprewrite \"cat {infile1:i} {infile2:i} > {outfile:o}\""
   , text ""
