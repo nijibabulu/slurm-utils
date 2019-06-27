@@ -14,8 +14,7 @@
 
 ## 0.2.0.0
 
-- Addition of **preset** feature to `slurmtasks`. 
-    - Users may choose from the builtin or custom presets, grouped settings.
+- Addition of **preset** feature to `slurmtasks`. Users may choose from the builtin or custom presets, grouped settings.
 - Move from `mtl` to `transformers` library
 
 ## 0.1.0.0
