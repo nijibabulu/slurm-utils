@@ -43,6 +43,7 @@ buildScript SlurmScriptSettings{prolog=pl, shortTasks=short} tasks = let
              slurmNodes . ("1-"++) . show <$> limit h
            , slurmName <$> name h
            , slurmChdir <$> workdir h
+           , slurmDependency <$> dependency h
            , slurmLicense <$> license h
          ]
      in show $ scriptLines

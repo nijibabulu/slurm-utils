@@ -29,6 +29,7 @@ data SlurmScriptProlog = SlurmScriptProlog
     , name :: Maybe String
     , workdir :: Maybe FilePath
     , limit :: Maybe Int
+    , dependency :: Maybe String
     , license :: Maybe String
     } deriving Show
 
@@ -53,6 +54,7 @@ mkSlurmScriptParser (SlurmScriptProlog  logdirVal
                                         nameVal
                                         workdirVal
                                         limitVal
+                                        dependencyVal
                                         licenseVal ) =
     SlurmScriptProlog
         <$> strOption
@@ -76,13 +78,16 @@ mkSlurmScriptParser (SlurmScriptProlog  logdirVal
                     ++ "These can be combined in ways such as array-8core&localmirror. "
                     ++ "See the slurm manual for more information."))
         <*> optional (strOption
-              (long "name" <> short 'n' <> help "The name of the job"))
+                (long "name" <> short 'n' <> help "The name of the job"))
         <*> optional (strOption
                 (long "workdir" <> metavar "DIR"
             <> help "Specify a working directory for the jobs on the remote node"))
         <*> optional (option auto
                 (long "slots" <> short 's' <> metavar "N"
               <> help "Maximum number of nodes to run the job on."))
+        <*> optional (strOption
+                (long "dependency" <> short 'd' <> metavar "JOBID"
+            <> help "Set a job dependency on JOBID"))
         <*> optional (strOption
                 (long "license" <> short 'l'
               <> help "License to give the job, e.g. \"scratch-highio\"."))
@@ -98,6 +103,7 @@ defaultSlurmScriptProlog =
                     , name=Nothing
                     , workdir=Nothing
                     , limit=Nothing
+                    , dependency=Nothing
                     , license=Nothing
                     }
 

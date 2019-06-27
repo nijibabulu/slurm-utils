@@ -46,7 +46,7 @@ shebangBash = shebang "/bin/bash"
 slurmOpt :: String -> String -> Doc
 slurmOpt o v = slurmDirective $ "--" ++ o ++ "=" ++ v
 
-slurmMem, slurmCpu, slurmChdir, slurmArray, slurmPartition, slurmNice, slurmName, slurmOutput, slurmError, slurmConstraint, slurmNodes, slurmLicense :: String -> Doc
+slurmMem, slurmCpu, slurmChdir, slurmArray, slurmPartition, slurmNice, slurmName, slurmOutput, slurmError, slurmConstraint, slurmNodes, slurmDependency, slurmLicense :: String -> Doc
 slurmMem = slurmOpt "mem"
 slurmCpu = slurmOpt "cpus-per-task"
 slurmChdir = slurmOpt "chdir"
@@ -58,6 +58,7 @@ slurmOutput = slurmOpt "output"
 slurmError = slurmOpt "error"
 slurmConstraint = slurmOpt "constraint"
 slurmNodes = slurmOpt "nodes"
+slurmDependency = slurmOpt "dependency"
 slurmLicense = slurmOpt "license"
 
 -- slurmArrayCase cmds = caseBlock "${SLURM_ARRAY_TASK_ID}" (map show [0..]) cmds
