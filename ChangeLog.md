@@ -5,10 +5,12 @@
 ## 0.2.2.0
 
 - Support for intermediate files in `tmprewrite`.
+- Addition of the `--dependency` option in `slurmtasks`.
 
 ## 0.2.1.0
 
 - Support for multiple preset values in `slurmtasks`.
+- Fix builtin `himem` prefix.
 
 ## 0.2.0.0
 
