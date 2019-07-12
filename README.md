@@ -143,40 +143,6 @@ working directory NON_EXISTENT_WORKING_DIR does not exist
 Use --ignore-errors to suppress errors
 ```
 
-### Job Names
-
-By default, `slurmtasks` does not specify a job name for your script. `sbatch` will automatically name your job after the name of your script:
-
-```
-$ echo "sleep 10" | slurmtasks > sleepy.slurm
-$ sbatch sleepy.slurm
-Submitted batch job 5808989
-$ squeue -u rpz
-           JOBID       PARTITION     NAME     USER ...
-       5808989_1           basic sleepy.s      rpz ...
-```
-
-Without a an intermediate script, though, your job will get the rather undignified name of `(null)`, but appear as `sbatch` in the queue:
-
-```
-$ echo "sleep 10" | slurmtasks | sbatch 
-Submitted batch job 5808989
-$ squeue -u rpz
-           JOBID       PARTITION     NAME     USER ...
-       5808989_1           basic   sbatch      rpz ...
-$ ls
-... (null).o5808989.1    (null).e5808989.1 ...
-```
-
-To fix this problem, you can specify a job name either via `slurmtasks` or via `sbatch`:
-
-```
-$ echo "sleep 10" | slurmtasks --name sleepy | sbatch
-$ echo "sleep 10" | slurmtasks | sbatch --job-name sleepy
-```
-
-both do basically the same thing.
-
 ### Large Jobs
 
 With extremely large jobs, the `sbatch` command will choke with some uninformative error messages, such as:

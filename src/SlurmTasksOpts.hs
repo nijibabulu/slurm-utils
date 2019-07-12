@@ -19,6 +19,10 @@ import System.Directory
 import SlurmPresets
 import Utils
 
+-- TODO: revert name to a maybe and use the following logic:
+--          if Nothing and file is used, use the basename of the file for the name
+--          if Nothing, set to "job" (or something)
+--          if Just, always override.
 data SlurmScriptProlog = SlurmScriptProlog
     { logdir :: FilePath
     , cpus :: Int
@@ -26,7 +30,7 @@ data SlurmScriptProlog = SlurmScriptProlog
     , partition :: String
     , nice :: Int
     , features :: String
-    , name :: Maybe String
+    , name :: String
     , workdir :: Maybe FilePath
     , limit :: Maybe Int
     , dependency :: Maybe String
@@ -77,8 +81,8 @@ mkSlurmScriptParser (SlurmScriptProlog  logdirVal
               <> help ("The required features of the nodes you will be submitting to. "
                     ++ "These can be combined in ways such as array-8core&localmirror. "
                     ++ "See the slurm manual for more information."))
-        <*> optional (strOption
-                (long "name" <> short 'n' <> help "The name of the job"))
+        <*> strOption (long "name" <> short 'n' <> value nameVal <> showDefault
+                    <> help "The name of the job")
         <*> optional (strOption
                 (long "workdir" <> metavar "DIR"
             <> help "Specify a working directory for the jobs on the remote node"))
@@ -100,7 +104,7 @@ defaultSlurmScriptProlog =
                     , partition="basic"
                     , nice=0
                     , features="array-1core"
-                    , name=Nothing
+                    , name="job"
                     , workdir=Nothing
                     , limit=Nothing
                     , dependency=Nothing

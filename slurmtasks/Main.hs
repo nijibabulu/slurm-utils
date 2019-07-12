@@ -38,10 +38,10 @@ buildScript SlurmScriptSettings{prolog=pl, shortTasks=short} tasks = let
          , (slurmNice . show) (nice h)
          , slurmPartition (partition h)
          , slurmConstraint (features h)
+         , slurmName (name h)
          ] ++
          catMaybes [
              slurmNodes . ("1-"++) . show <$> limit h
-           , slurmName <$> name h
            , slurmChdir <$> workdir h
            , slurmDependency <$> dependency h
            , slurmLicense <$> license h
@@ -72,7 +72,7 @@ main = do
     opts <- parseSlurmTasksOpts
     verifySlurmTasksOpts opts
     when (displayVersion opts) $ do
-        putStrLn $ "slurmtasks v" ++ (showVersion version)
+        putStrLn $ "slurmtasks v" ++ showVersion version
         exitSuccess
     contents <- case file opts of
             Nothing -> getContents
