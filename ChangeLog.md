@@ -2,6 +2,10 @@
 
 ## Unreleased changes
 
+## 0.2.3.0
+
+- Set a default name for jobs (temporary change).
+
 ## 0.2.2.0
 
 - Support for intermediate files in `tmprewrite`.
