@@ -4,8 +4,12 @@
 
 ## 0.2.4.0
 
-- Don't process empty tasks.
+- Don't process empty tasks
 - Emit an error on empty input
+
+## 0.2.3.0
+
+- Set a default name for jobs (temporary change).
 
 ## 0.2.2.0
 
