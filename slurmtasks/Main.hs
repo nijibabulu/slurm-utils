@@ -77,8 +77,9 @@ main = do
     contents <- case file opts of
             Nothing -> getContents
             (Just fn) -> readFile fn
-    guard $ T.length (T.strip (T.pack contents)) > 0
-    let tasks = processTasks opts (lines contents)
+    let emptyStr s = T.length (T.strip (T.pack s)) == 0
+    when (emptyStr contents) $ errorWithoutStackTrace "Empty input"
+    let tasks = processTasks opts (filter (not . emptyStr) (lines contents))
     putStrLn $ buildScript opts tasks
 
 -- fromJust $ getParseResult $ execParserPure defaultPrefs ( info (slurmScriptParser  <**> helper) idm) []

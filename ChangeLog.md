@@ -2,9 +2,10 @@
 
 ## Unreleased changes
 
-## 0.2.3.0
+## 0.2.4.0
 
-- Set a default name for jobs (temporary change).
+- Don't process empty tasks.
+- Emit an error on empty input
 
 ## 0.2.2.0
 
