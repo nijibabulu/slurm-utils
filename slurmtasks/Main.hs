@@ -1,6 +1,5 @@
 module Main where
 
-import Control.Monad
 import Data.List (intercalate)
 import Data.Maybe
 import Data.Version (showVersion)
