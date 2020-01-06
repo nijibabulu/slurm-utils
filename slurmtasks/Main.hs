@@ -35,12 +35,13 @@ buildScript SlurmScriptSettings{prolog=pl, shortTasks=short} tasks = let
          , (slurmArray . ("1-"++) . show) (length tasks)
          , (slurmMem . show . (1000*)) (mem h)
          , (slurmNice . show) (nice h)
-         , slurmPartition (partition h)
-         , slurmConstraint (features h)
          , slurmName (name h)
          ] ++
          catMaybes [
-             slurmNodes . ("1-"++) . show <$> limit h
+             slurmConstraint <$> features h
+           , slurmPartition <$> partition h
+           , slurmTime <$> time h
+           , slurmNodes . ("1-"++) . show <$> limit h
            , slurmChdir <$> workdir h
            , slurmDependency <$> dependency h
            , slurmLicense <$> license h

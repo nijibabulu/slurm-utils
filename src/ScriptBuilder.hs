@@ -46,7 +46,7 @@ shebangBash = shebang "/bin/bash"
 slurmOpt :: String -> String -> Doc
 slurmOpt o v = slurmDirective $ "--" ++ o ++ "=" ++ v
 
-slurmMem, slurmCpu, slurmChdir, slurmArray, slurmPartition, slurmNice, slurmName, slurmOutput, slurmError, slurmConstraint, slurmNodes, slurmDependency, slurmLicense :: String -> Doc
+slurmMem, slurmCpu, slurmChdir, slurmArray, slurmPartition, slurmNice, slurmName, slurmOutput, slurmError, slurmTime, slurmConstraint, slurmNodes, slurmDependency, slurmLicense :: String -> Doc
 slurmMem = slurmOpt "mem"
 slurmCpu = slurmOpt "cpus-per-task"
 slurmChdir = slurmOpt "chdir"
@@ -56,6 +56,7 @@ slurmNice = slurmOpt "nice"
 slurmName = slurmOpt "job-name"
 slurmOutput = slurmOpt "output"
 slurmError = slurmOpt "error"
+slurmTime = slurmOpt "time"
 slurmConstraint = slurmOpt "constraint"
 slurmNodes = slurmOpt "nodes"
 slurmDependency = slurmOpt "dependency"

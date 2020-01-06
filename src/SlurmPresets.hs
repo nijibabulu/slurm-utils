@@ -18,6 +18,7 @@ import Control.Monad.Trans.Writer.Strict
 import Data.Char (isSpace, isAlphaNum)
 import Data.List (find)
 import Data.Maybe
+import Data.Monoid ((<>))
 import Data.Typeable (Typeable, cast)
 import Options.Applicative
 import Options.Applicative.Help.Pretty hiding (string)
@@ -38,6 +39,7 @@ instance Show Preset where
 
 data PresetInfo = PresetInfo
     { presets :: [Preset]
+    , defaults :: Preset
     , userFilePath :: FilePath
     }
 
@@ -54,6 +56,7 @@ data PresetError =
   | PresetUserFileNotFoundError FilePath
   | PresetNotFoundError PresetInfo String
   | PresetInvalidOptions String String
+  | PresetNoDefault 
     deriving (Typeable)
 
 instance Show PresetError where
@@ -61,6 +64,7 @@ instance Show PresetError where
     show (PresetUserFileNotFoundError fn) = "Presets file not found: " ++ fn
     show (PresetNotFoundError pi p) = "No such preset: " ++ p ++ "\n\n" ++ showDoc (availablePresetsDoc pi)
     show (PresetInvalidOptions p h) = "Could not parse options in preset: \"" ++ p ++ "\"\n\n" ++ h
+    show (PresetNoDefault) = "No hardcoded default or user default found."
     show e = show e
 
 fromPresetError :: Exception e => SomeException -> Maybe e
@@ -74,9 +78,10 @@ catchPresetError :: (MonadCatch m) => m a -> (SomePresetError -> m a) -> m a
 catchPresetError = catchJust fromPresetError
 
 builtinPresets :: [String]
-builtinPresets = ["8core: --mem 64 --cpus 8 --features array-8core",
-                  "himem: --mem 1000 --cpus 40 --features '' --partition himem",
-                  "log: --logdir logs"]
+builtinPresets = [ "default: --partition basic --features array-1core"
+                 , "8core: --mem 64 --cpus 8 --features array-8core"
+                 , "himem: --mem 1000 --cpus 40 --features '' --partition himem"
+                 , "log: --logdir logs"]
 
 availablePresetsDoc :: PresetInfo -> Doc
 availablePresetsDoc pi =  text "Available presets:" <> linebreak <>
@@ -108,14 +113,17 @@ presetInfo = do
     pathExists <- (liftIO . doesPathExist) path
     users <- if pathExists then (liftIO . parsePresetFile) path else return [] -- throw $ PresetUserFileNotFoundError path
     let builtins = map (fromJust . match presetParser) builtinPresets
-    return $ PresetInfo {presets = users ++ builtins, userFilePath=path}
+    let mdefaults = (findDefault users) <|> (findDefault builtins)
+    defaults <- maybe (throwM PresetNoDefault) return mdefaults
+    return $ PresetInfo {presets = excludeDefault (users ++ builtins), defaults=defaults, userFilePath=path}
     where
         parsePresetFile fn = do
             ls <- lines <$> (liftIO . readFile) fn
             let (ps,e) = runWriter $ mapM parsePresetWithLog ls
             unless (null e) $ warning $ show (PresetsUnparseableError fn e)
             return $ catMaybes ps
-
+        findDefault ps = find ((== "default") . presetName) ps
+        excludeDefault ps = filter ((/= "default") . presetName) ps
 
 parsePresetArgs :: (MonadThrow m) => ParserInfo a -> Preset -> m a
 parsePresetArgs parserInfo p =

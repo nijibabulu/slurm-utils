@@ -10,6 +10,7 @@ import Control.Monad.Trans.Class
 import Control.Monad.Trans.Writer.Strict
 import Data.List.Split (splitOn)
 import Data.Maybe (fromJust)
+import Data.Monoid ((<>))
 import Options.Applicative
 import Options.Applicative.Common (evalParser)
 import Options.Applicative.Help.Pretty
@@ -27,10 +28,11 @@ data SlurmScriptProlog = SlurmScriptProlog
     { logdir :: FilePath
     , cpus :: Int
     , mem :: Int
-    , partition :: String
     , nice :: Int
-    , features :: String
     , name :: String
+    , partition :: Maybe String
+    , time :: Maybe String
+    , features :: Maybe String
     , workdir :: Maybe FilePath
     , limit :: Maybe Int
     , dependency :: Maybe String
@@ -49,17 +51,18 @@ data SlurmScriptSettings = SlurmScriptSettings
     }
 
 mkSlurmScriptParser :: SlurmScriptProlog -> Parser SlurmScriptProlog
-mkSlurmScriptParser (SlurmScriptProlog  logdirVal
-                                        cpusVal
-                                        memVal
-                                        partitionVal
-                                        niceVal
-                                        featuresVal
-                                        nameVal
-                                        workdirVal
-                                        limitVal
-                                        dependencyVal
-                                        licenseVal ) =
+mkSlurmScriptParser (SlurmScriptProlog logdirVal
+                                       cpusVal
+                                       memVal
+                                       niceVal
+                                       nameVal
+                                       partitionVal
+                                       timeVal
+                                       featuresVal
+                                       workdirVal
+                                       limitVal
+                                       dependencyVal
+                                       licenseVal ) =
     SlurmScriptProlog
         <$> strOption
                 (long "logdir" <> short 'o' <> metavar "DIR" <> value logdirVal <> showDefault
@@ -70,19 +73,21 @@ mkSlurmScriptParser (SlurmScriptProlog  logdirVal
         <*> option auto
                 (long "mem" <> short 'm' <> metavar "GB" <> value memVal <> showDefault
               <> help "How much memory (in GB) to request")
-        <*> strOption
-                (long "partition" <> value partitionVal <> showDefault
-              <> help "Which partition to request")
         <*> option auto
                 (long "nice" <> metavar "N" <> value niceVal <> showDefault
               <> help "The \"nice\" value of the job (higher means lower priority)")
-        <*> strOption
-                (long "features" <> short 'f' <> value featuresVal <> showDefault
-              <> help ("The required features of the nodes you will be submitting to. "
-                    ++ "These can be combined in ways such as array-8core&localmirror. "
-                    ++ "See the slurm manual for more information."))
         <*> strOption (long "name" <> short 'n' <> value nameVal <> showDefault
                     <> help "The name of the job")
+        <*> optional (strOption
+                (long "partition" <> help "Which partition to request"))
+        <*> optional (strOption 
+                (long "time" <> metavar "T" 
+              <> help "How long the job is alloted by the slurmd to run"))
+        <*> optional (strOption
+                (long "features" <> short 'f' 
+              <> help ("The required features of the nodes you will be submitting to. "
+                    ++ "These can be combined in ways such as array-8core&localmirror. "
+                    ++ "See the slurm manual for more information.")))
         <*> optional (strOption
                 (long "workdir" <> metavar "DIR"
             <> help "Specify a working directory for the jobs on the remote node"))
@@ -99,17 +104,18 @@ mkSlurmScriptParser (SlurmScriptProlog  logdirVal
 defaultSlurmScriptProlog :: SlurmScriptProlog
 defaultSlurmScriptProlog =
     SlurmScriptProlog { logdir="."
-                    , cpus=1
-                    , mem=3
-                    , partition="basic"
-                    , nice=0
-                    , features="array-1core"
-                    , name="job"
-                    , workdir=Nothing
-                    , limit=Nothing
-                    , dependency=Nothing
-                    , license=Nothing
-                    }
+                      , cpus=1
+                      , mem=3
+                      , nice=0
+                      , name="job"
+                      , partition=Nothing
+                      , time=Nothing
+                      , features=Nothing
+                      , workdir=Nothing
+                      , limit=Nothing
+                      , dependency=Nothing
+                      , license=Nothing
+                      }
 
 optParser :: SlurmScriptProlog -> PresetInfo -> Parser SlurmScriptSettings
 optParser prolog pi = SlurmScriptSettings
@@ -153,11 +159,13 @@ fetchPreset pi pn = do
     where
         baseSettings = fromJust (evalParser (optParser defaultSlurmScriptProlog pi))
 
+-- TODO: (parserInfo (prolog settings) pi)) is used twice--extracting to and from parser is somewhat annoying
 parseSlurmTasksOpts :: IO SlurmScriptSettings
 parseSlurmTasksOpts = do
     pi <- presetInfo
     settings <- execParser (parserInfo defaultSlurmScriptProlog pi)
-    maybe (return settings) (fetchPreset pi) (preset settings)
+    defaultSettings <- parsePresetArgs (parserInfo (prolog settings) pi) (defaults pi)
+    maybe (return defaultSettings) (fetchPreset pi) (preset defaultSettings)
 
 verifyDir :: String -> String -> WriterT String IO ()
 verifyDir t d = do
