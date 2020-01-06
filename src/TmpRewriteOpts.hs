@@ -7,6 +7,7 @@ module TmpRewriteOpts (
     , parseTmpSettings
 ) where
 
+import Data.Monoid ((<>))
 import Data.List (intercalate)
 import Options.Applicative 
 import Options.Applicative.Help.Pretty
@@ -111,7 +112,7 @@ parserInfo =
     (tmpOptions <**> helper)
     (fullDesc <>
      progDescDoc (Just tmprewriteDescDoc) <>
-     header "tmp_rewrite - Rewrite command(s) in temporary space")
+     header "tmprewrite - Rewrite command(s) in temporary space")
 
 parserPrefs :: ParserPrefs
 parserPrefs = prefs showHelpOnEmpty
