@@ -92,7 +92,8 @@ presetParser = Preset <$> presetName <* string ":" <*> presetArgs
     where
         presetName = many $ psym isAlphaNum
         presetArg = many $ psym (not . isSpace)
-        presetArgs = catMaybes <$> many ((Just <$> presetArg) <|> Nothing <$ psym isSpace)
+        presetQuotedArg = sym '"' *> many (psym (/= '"')) <* sym '"'
+        presetArgs = catMaybes <$> many ((Just <$> (presetQuotedArg <|> presetArg)) <|> Nothing <$ psym isSpace)
 
 parsePreset :: String -> Maybe Preset
 parsePreset = match presetParser
