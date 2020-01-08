@@ -171,7 +171,7 @@ parseSlurmTasksOpts = do
     pi <- presetInfo
     settings <- execParser (parserInfo defaultSlurmScriptProlog pi)
     defaultSettings <- parsePresetArgs (parserInfo (prolog settings) pi) (defaults pi)
-    maybe (return defaultSettings) (fetchPreset pi) (preset defaultSettings)
+    maybe (return defaultSettings) (fetchPreset pi) (preset settings)
 
 verifyDir :: String -> String -> WriterT String IO ()
 verifyDir t d = do
