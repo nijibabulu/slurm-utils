@@ -27,7 +27,7 @@ buildScript SlurmScriptSettings{prolog=pl, shortTasks=short} tasks = let
          ]
      buildTask True task = scriptStmt task
      buildHeader h tasks = scriptLines $
-         [ shebangBash
+         [ shebang (shell h)
          , comment ""
          , slurmOutput (logdir h </> "%x.o%A.%a")
          , slurmError (logdir h </> "%x.e%A.%a")

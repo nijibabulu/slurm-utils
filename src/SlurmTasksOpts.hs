@@ -25,7 +25,8 @@ import Utils
 --          if Nothing, set to "job" (or something)
 --          if Just, always override.
 data SlurmScriptProlog = SlurmScriptProlog
-    { logdir :: FilePath
+    { shell :: String 
+    , logdir :: FilePath
     , cpus :: Int
     , mem :: Int
     , nice :: Int
@@ -51,7 +52,8 @@ data SlurmScriptSettings = SlurmScriptSettings
     }
 
 mkSlurmScriptParser :: SlurmScriptProlog -> Parser SlurmScriptProlog
-mkSlurmScriptParser (SlurmScriptProlog logdirVal
+mkSlurmScriptParser (SlurmScriptProlog shellVal
+                                       logdirVal
                                        cpusVal
                                        memVal
                                        niceVal
@@ -65,6 +67,9 @@ mkSlurmScriptParser (SlurmScriptProlog logdirVal
                                        licenseVal ) =
     SlurmScriptProlog
         <$> strOption
+                (long "shell" <> metavar "PROG" <> value shellVal <> showDefault
+              <> help "Shell string to execute")
+        <*> strOption
                 (long "logdir" <> short 'o' <> metavar "DIR" <> value logdirVal <> showDefault
               <> help "Directory in which to place output and error files")
         <*> option auto
@@ -103,7 +108,8 @@ mkSlurmScriptParser (SlurmScriptProlog logdirVal
 
 defaultSlurmScriptProlog :: SlurmScriptProlog
 defaultSlurmScriptProlog =
-    SlurmScriptProlog { logdir="."
+    SlurmScriptProlog { shell="/bin/bash"
+                      , logdir="."
                       , cpus=1
                       , mem=3
                       , nice=0
