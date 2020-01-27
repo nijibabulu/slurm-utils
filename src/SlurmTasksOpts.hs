@@ -53,18 +53,18 @@ data SlurmScriptSettings = SlurmScriptSettings
 
 mkPrologParser :: SlurmScriptProlog -> Parser SlurmScriptProlog
 mkPrologParser (SlurmScriptProlog shellVal
-                                       logdirVal
-                                       cpusVal
-                                       memVal
-                                       niceVal
-                                       nameVal
-                                       partitionVal
-                                       timeVal
-                                       featuresVal
-                                       workdirVal
-                                       limitVal
-                                       dependencyVal
-                                       licenseVal ) =
+                                  logdirVal
+                                  cpusVal
+                                  memVal
+                                  niceVal
+                                  nameVal
+                                  partitionVal
+                                  timeVal
+                                  featuresVal
+                                  workdirVal
+                                  limitVal
+                                  dependencyVal
+                                  licenseVal ) =
     SlurmScriptProlog
         <$> strOption
                 (long "shell" <> metavar "PROG" <> value shellVal <> showDefault
@@ -83,28 +83,28 @@ mkPrologParser (SlurmScriptProlog shellVal
               <> help "The \"nice\" value of the job (higher means lower priority)")
         <*> strOption (long "name" <> short 'n' <> value nameVal <> showDefault
                     <> help "The name of the job")
-        <*> optional (strOption
-                (long "partition" <> help "Which partition to request"))
-        <*> optional (strOption 
-                (long "time" <> metavar "T" 
-              <> help "How long the job is alloted by the slurmd to run"))
-        <*> optional (strOption
-                (long "features" <> short 'f' 
+        <*> option (Just <$> str)
+                (long "partition" <> value partitionVal <> help "Which partition to request")
+        <*> option (Just <$> str)
+                (long "time" <> metavar "T"  <> value timeVal
+              <> help "How long the job is alloted by the slurmd to run")
+        <*> option (Just <$> str)
+                (long "features" <> short 'f'  <> value featuresVal
               <> help ("The required features of the nodes you will be submitting to. "
                     ++ "These can be combined in ways such as array-8core&localmirror. "
-                    ++ "See the slurm manual for more information.")))
-        <*> optional (strOption
-                (long "workdir" <> metavar "DIR"
-            <> help "Specify a working directory for the jobs on the remote node"))
-        <*> optional (option auto
-                (long "slots" <> short 's' <> metavar "N"
-              <> help "Maximum number of nodes to run the job on."))
-        <*> optional (strOption
-                (long "dependency" <> short 'd' <> metavar "JOBID"
-            <> help "Set a job dependency on JOBID"))
-        <*> optional (strOption
-                (long "license" <> short 'l'
-              <> help "License to give the job, e.g. \"scratch-highio\"."))
+                    ++ "See the slurm manual for more information."))
+        <*> option (Just <$> str)
+                (long "workdir" <> metavar "DIR" <> value workdirVal
+            <> help "Specify a working directory for the jobs on the remote node")
+        <*> option (Just <$> auto)
+                (long "slots" <> short 's' <> metavar "N" <> value limitVal
+              <> help "Maximum number of nodes to run the job on.")
+        <*> option (Just <$> str)
+                (long "dependency" <> short 'd' <> metavar "JOBID" <> value dependencyVal
+            <> help "Set a job dependency on JOBID")
+        <*> option (Just <$> str)
+                (long "license" <> short 'l' <> value licenseVal
+              <> help "License to give the job, e.g. \"scratch-highio\".")
 
 defaultSlurmScriptProlog :: SlurmScriptProlog
 defaultSlurmScriptProlog =
