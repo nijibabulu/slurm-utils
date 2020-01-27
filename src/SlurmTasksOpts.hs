@@ -51,8 +51,8 @@ data SlurmScriptSettings = SlurmScriptSettings
     , file :: Maybe String
     }
 
-mkSlurmScriptParser :: SlurmScriptProlog -> Parser SlurmScriptProlog
-mkSlurmScriptParser (SlurmScriptProlog shellVal
+mkPrologParser :: SlurmScriptProlog -> Parser SlurmScriptProlog
+mkPrologParser (SlurmScriptProlog shellVal
                                        logdirVal
                                        cpusVal
                                        memVal
@@ -123,9 +123,10 @@ defaultSlurmScriptProlog =
                       , license=Nothing
                       }
 
-optParser :: SlurmScriptProlog -> PresetInfo -> Parser SlurmScriptSettings
-optParser prolog pi = SlurmScriptSettings
-        <$> mkSlurmScriptParser prolog
+ 
+mkSettingsParser :: SlurmScriptProlog -> PresetInfo -> Parser SlurmScriptSettings
+mkSettingsParser prolog pi = SlurmScriptSettings
+        <$> mkPrologParser prolog
         <*> option auto (long "group-by" <> short 'g' <> value 1 <> showDefault)
         <*> flag True False (long "no-ulimit" <> short 'u')
         <*> switch (long "ignore-errors")
@@ -142,7 +143,7 @@ presetDoc pi = paragraph presetText <> availablePresetsDoc pi
 
 parserInfo :: SlurmScriptProlog -> PresetInfo -> ParserInfo SlurmScriptSettings
 parserInfo prolog pi = info
-    ( optParser prolog pi <**> helper)
+    ( mkSettingsParser prolog pi <**> helper)
     ( header "Construct a slurm script out of a list of tasks."
     <> progDesc
         (  "Convert a list of tasks into a longer form script "
@@ -153,17 +154,24 @@ parserInfo prolog pi = info
     <> fullDesc
     )
 
+-- defaultSettings :: SlurmScriptSettings
+-- defaultSettings = fromJust $ evalParser $ mkSettingsParser defaultSlurmScriptProlog emptyPresetInfo
+
 -- TODO: clean up access to the default settings
-fetchPreset :: PresetInfo -> String -> IO SlurmScriptSettings
-fetchPreset pi pn = do
+fetchPreset :: PresetInfo -> SlurmScriptSettings -> String -> IO SlurmScriptSettings
+fetchPreset pi s pn = do
     ps <- mapM (findPreset pi) $ splitOn "," pn
     settings <- foldM 
                 (\sss p -> parsePresetArgs (parserInfo (prolog sss) pi) p)
-                baseSettings
+                s
                 ps
     execParser (parserInfo (prolog settings) pi)
-    where
-        baseSettings = fromJust (evalParser (optParser defaultSlurmScriptProlog pi))
+
+-- baseSettings :: IO SlurmScriptSettings
+-- baseSettings = execParser (parserInfo defaultSlurmScriptProlog presetInfo)
+
+-- defaultSettings :: IO SlurmScriptSettings
+-- defaultSettings = parsePresetArgs (parserInfo (prolog baseSettings) presetInfo) (defaults presetInfo)
 
 -- TODO: (parserInfo (prolog settings) pi)) is used twice--extracting to and from parser is somewhat annoying
 parseSlurmTasksOpts :: IO SlurmScriptSettings
@@ -171,7 +179,7 @@ parseSlurmTasksOpts = do
     pi <- presetInfo
     settings <- execParser (parserInfo defaultSlurmScriptProlog pi)
     defaultSettings <- parsePresetArgs (parserInfo (prolog settings) pi) (defaults pi)
-    maybe (return defaultSettings) (fetchPreset pi) (preset settings)
+    maybe (return defaultSettings) (fetchPreset pi defaultSettings) (preset settings)
 
 verifyDir :: String -> String -> WriterT String IO ()
 verifyDir t d = do
