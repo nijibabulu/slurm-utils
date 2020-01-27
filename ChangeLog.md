@@ -2,6 +2,11 @@
 
 ## Unreleased changes
 
+## 0.2.5.0
+
+- add the ability to change the shell
+- fix bugs with preests
+
 ## 0.2.4.0
 
 - Don't process empty tasks
