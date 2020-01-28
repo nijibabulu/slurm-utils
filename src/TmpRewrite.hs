@@ -83,7 +83,7 @@ rewriteToTmp s p =
 
 rewriteToRoot :: TmpSettings -> String -> String
 rewriteToRoot s p@('/':_) = p
-rewriteToRoot s p = root s </> takeFileName p
+rewriteToRoot s p = root s </> p
 
 mkdirRewrite :: TmpSettings -> [CmdPart] -> Maybe String
 mkdirRewrite s cmdParts =

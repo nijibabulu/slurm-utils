@@ -27,7 +27,7 @@ dependencies:
 - optparse-applicative
 - base >= 4.7 && < 5
 name: slurm-utils
-version: 0.2.5.1
+version: 0.2.5.2
 extra-source-files:
 - README.md
 - ChangeLog.md
