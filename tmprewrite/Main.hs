@@ -20,3 +20,4 @@ main = do
     Just template -> returnIO [template]
   out <- rewrite settings ls
   putStr $ unlines out
+

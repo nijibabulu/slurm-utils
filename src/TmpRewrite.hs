@@ -80,6 +80,11 @@ rewriteToTmp s p =
     "test" -> p
     _ -> tmploc s </> takeFileName p
 
+
+rewriteToRoot :: TmpSettings -> String -> String
+rewriteToRoot s p@('/':_) = p
+rewriteToRoot s p = root s </> takeFileName p
+
 mkdirRewrite :: TmpSettings -> [CmdPart] -> Maybe String
 mkdirRewrite s cmdParts =
   let rawDirs = mapMaybe outputDirName cmdParts
@@ -107,7 +112,7 @@ cpBackRewrite :: TmpSettings -> [CmdPart] -> Maybe String
 cpBackRewrite s cmdParts =
   let outputs = nub $ mapMaybe outputPath cmdParts
       outputSources = map (rewriteToTmp s) outputs
-      outputDests = map takeDirectory outputs
+      outputDests = map (rewriteToRoot s) outputs
       cpBackCmd src dest = unwords [cpcmd s, src, dest]
       cpBacks =
         intercalate " ; " $ zipWith cpBackCmd outputSources outputDests

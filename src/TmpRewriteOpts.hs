@@ -11,6 +11,7 @@ import Data.Monoid ((<>))
 import Data.List (intercalate)
 import Options.Applicative 
 import Options.Applicative.Help.Pretty
+import System.Directory
 
 import Utils
 
@@ -20,6 +21,7 @@ data TmpSettings = TmpSettings
   , tmploc :: String
   , cpcmd :: String
   , lockfile :: String
+  , root :: String
   , ignoreErrors :: Bool
   , displayVersion :: Bool
   , cmd :: Maybe String
@@ -51,6 +53,10 @@ tmpOptions =
           (long "lockfile" <> value "LOCK" <> showDefault <> help
             "Name of the lock file"
           )
+    <*> strOption
+          (long "root" <> value "" <> help
+           ("Use this directory as the the root to copy back to. Default " ++
+            "is to use the current working directory."))
     <*> switch
           (  long "ignore-errors"
           <> help "Do not check for missing files before rewriting"
@@ -118,4 +124,7 @@ parserPrefs :: ParserPrefs
 parserPrefs = prefs showHelpOnEmpty
 
 parseTmpSettings :: IO TmpSettings
-parseTmpSettings = customExecParser parserPrefs parserInfo
+parseTmpSettings = do
+    settings <- customExecParser parserPrefs parserInfo
+    cwd <- getCurrentDirectory
+    return $ settings { root = (root settings <|> cwd) }
