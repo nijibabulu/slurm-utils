@@ -38,6 +38,7 @@ data SlurmScriptProlog = SlurmScriptProlog
     , limit :: Maybe Int
     , dependency :: Maybe String
     , license :: Maybe String
+    , extra :: [String]
     } deriving Show
 
 data SlurmScriptSettings = SlurmScriptSettings
@@ -64,7 +65,8 @@ mkPrologParser (SlurmScriptProlog shellVal
                                   workdirVal
                                   limitVal
                                   dependencyVal
-                                  licenseVal ) =
+                                  licenseVal
+                                  _ ) =
     SlurmScriptProlog
         <$> strOption
                 (long "shell" <> metavar "PROG" <> value shellVal <> showDefault
@@ -105,6 +107,10 @@ mkPrologParser (SlurmScriptProlog shellVal
         <*> option (Just <$> str)
                 (long "license" <> short 'l' <> value licenseVal
               <> help "License to give the job, e.g. \"scratch-highio\".")
+        <*> many (strOption
+                (long "extra" <> short 'e' 
+              <> help ("Extra Arguments to add to the header of the slurm task file "
+                    ++ "which will directly be interpreted by sbatch.")))
 
 defaultSlurmScriptProlog :: SlurmScriptProlog
 defaultSlurmScriptProlog =
@@ -121,6 +127,7 @@ defaultSlurmScriptProlog =
                       , limit=Nothing
                       , dependency=Nothing
                       , license=Nothing
+                      , extra=[]
                       }
 
  
@@ -179,7 +186,7 @@ parseSlurmTasksOpts = do
     pi <- presetInfo
     settings <- execParser (parserInfo defaultSlurmScriptProlog pi)
     defaultSettings <- parsePresetArgs (parserInfo (prolog settings) pi) (defaults pi)
-    maybe (return defaultSettings) (fetchPreset pi defaultSettings) (preset settings)
+    maybe (return settings) (fetchPreset pi defaultSettings) (preset settings)
 
 verifyDir :: String -> String -> WriterT String IO ()
 verifyDir t d = do

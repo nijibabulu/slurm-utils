@@ -37,6 +37,7 @@ buildScript SlurmScriptSettings{prolog=pl, shortTasks=short} tasks = let
          , (slurmNice . show) (nice h)
          , slurmName (name h)
          ] ++
+         (map slurmDirective (extra h)) ++
          catMaybes [
              slurmConstraint <$> features h
            , slurmPartition <$> partition h
