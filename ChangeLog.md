@@ -2,6 +2,10 @@
 
 ## Unreleased changes
 
+## 0.2.5.4
+
+- do not mkdir for the same directory more than once in mkdiRewrite
+
 ## 0.2.5.0
 
 - add the ability to change the shell

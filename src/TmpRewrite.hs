@@ -87,8 +87,8 @@ rewriteToRoot s p = root s </> p
 
 mkdirRewrite :: TmpSettings -> [CmdPart] -> Maybe String
 mkdirRewrite s cmdParts =
-  let rawDirs = mapMaybe outputDirName cmdParts
-      dirs = map (rewriteToTmp s) rawDirs
+  let rawDirs = nub $ mapMaybe outputDirName cmdParts
+      dirs = nub $ map (rewriteToTmp s) rawDirs
     in case dirs of
         [] -> Nothing
         _ -> Just $ "mkdir -p " ++ unwords dirs
