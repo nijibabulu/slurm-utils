@@ -13,9 +13,11 @@ import Data.Maybe (fromJust)
 import Data.Monoid ((<>))
 import Options.Applicative
 import Options.Applicative.Common (evalParser)
+import Options.Applicative.Extra (handleParseResult)
 import Options.Applicative.Help.Pretty
 import System.IO.Error
 import System.Directory
+import System.Environment (getArgs)
 
 import SlurmPresets
 import Utils
@@ -184,9 +186,11 @@ fetchPreset pi s pn = do
 parseSlurmTasksOpts :: IO SlurmScriptSettings
 parseSlurmTasksOpts = do
     pi <- presetInfo
-    settings <- execParser (parserInfo defaultSlurmScriptProlog pi)
-    defaultSettings <- parsePresetArgs (parserInfo (prolog settings) pi) (defaults pi)
-    maybe (return settings) (fetchPreset pi defaultSettings) (preset settings)
+    let parseArgsWithProlog s a = (execParserPure defaultPrefs (parserInfo s pi) <$> a) >>= handleParseResult
+    let defaultArgs = args <$> defaults <$> presetInfo
+    defaultSettings <- parseArgsWithProlog defaultSlurmScriptProlog defaultArgs
+    settings <- parseArgsWithProlog (prolog defaultSettings) getArgs
+    maybe (return settings) (fetchPreset pi settings) (preset settings)
 
 verifyDir :: String -> String -> WriterT String IO ()
 verifyDir t d = do

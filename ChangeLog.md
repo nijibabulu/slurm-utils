@@ -2,6 +2,10 @@
 
 ## Unreleased changes
 
+## 0.2.5.5
+
+- fix priority for default, parsed and preset options
+
 ## 0.2.5.4
 
 - do not mkdir for the same directory more than once in mkdiRewrite
