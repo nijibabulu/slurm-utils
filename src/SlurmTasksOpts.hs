@@ -9,10 +9,8 @@ import Control.Monad ( unless, foldM )
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Writer.Strict
 import Data.List.Split (splitOn)
-import Data.Maybe (fromJust)
 import Data.Monoid ((<>))
 import Options.Applicative
-import Options.Applicative.Common (evalParser)
 import Options.Applicative.Extra (handleParseResult)
 import Options.Applicative.Help.Pretty
 import System.IO.Error
@@ -163,9 +161,6 @@ parserInfo prolog pi = info
     <> fullDesc
     )
 
--- defaultSettings :: SlurmScriptSettings
--- defaultSettings = fromJust $ evalParser $ mkSettingsParser defaultSlurmScriptProlog emptyPresetInfo
-
 -- TODO: clean up access to the default settings
 fetchPreset :: PresetInfo -> SlurmScriptSettings -> String -> IO SlurmScriptSettings
 fetchPreset pi s pn = do
@@ -175,12 +170,6 @@ fetchPreset pi s pn = do
                 s
                 ps
     execParser (parserInfo (prolog settings) pi)
-
--- baseSettings :: IO SlurmScriptSettings
--- baseSettings = execParser (parserInfo defaultSlurmScriptProlog presetInfo)
-
--- defaultSettings :: IO SlurmScriptSettings
--- defaultSettings = parsePresetArgs (parserInfo (prolog baseSettings) presetInfo) (defaults presetInfo)
 
 -- TODO: (parserInfo (prolog settings) pi)) is used twice--extracting to and from parser is somewhat annoying
 parseSlurmTasksOpts :: IO SlurmScriptSettings
