@@ -66,7 +66,7 @@ processTasks opts tasks =
     let prependUlimit opts task = if ulimit opts
             then "ulimit -v " ++ show (mem (prolog opts) * 1127000) ++ "\n" ++ task
             else task
-        groupedTasks = groupTasksBy (groups opts) tasks
+        groupedTasks = groupTasksBy (linesPerTask opts) tasks
     in map (prependUlimit opts) groupedTasks
 
 main = do

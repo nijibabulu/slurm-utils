@@ -43,7 +43,7 @@ data SlurmScriptProlog = SlurmScriptProlog
 
 data SlurmScriptSettings = SlurmScriptSettings
     { prolog :: SlurmScriptProlog
-    , groups :: Int
+    , linesPerTask :: Int
     , ulimit :: Bool
     , ignoreErrors :: Bool
     , shortTasks :: Bool
@@ -88,7 +88,7 @@ mkPrologParser (SlurmScriptProlog shellVal
         <*> option (Just <$> str)
                 (long "partition" <> value partitionVal <> help "Which partition to request")
         <*> option (Just <$> str)
-                (long "time" <> metavar "T"  <> value timeVal
+                (long "time" <> metavar "T" <> value timeVal
               <> help "How long the job is alloted by the slurmd to run")
         <*> option (Just <$> str)
                 (long "features" <> short 'f'  <> value featuresVal
@@ -105,7 +105,7 @@ mkPrologParser (SlurmScriptProlog shellVal
                 (long "dependency" <> short 'd' <> metavar "JOBID" <> value dependencyVal
             <> help "Set a job dependency on JOBID")
         <*> option (Just <$> str)
-                (long "license" <> short 'l' <> value licenseVal
+                (long "license" <> short 'i' <> value licenseVal
               <> help "License to give the job, e.g. \"scratch-highio\".")
         <*> many (strOption
                 (long "extra" <> short 'e' 
@@ -134,9 +134,11 @@ defaultSlurmScriptProlog =
 mkSettingsParser :: SlurmScriptProlog -> PresetInfo -> Parser SlurmScriptSettings
 mkSettingsParser prolog pi = SlurmScriptSettings
         <$> mkPrologParser prolog
-        <*> option auto (long "group-by" <> short 'g' <> value 1 <> showDefault)
-        <*> flag True False (long "no-ulimit" <> short 'u')
-        <*> switch (long "ignore-errors")
+        <*> option auto (long "lines-per-task" <> short 'l' <> value 1 <> showDefault <> metavar "N" <>
+                         help "create aggregate tasks of N input lines")
+        <*> flag True False (long "no-ulimit" <> short 'u' <>
+                             help "do not impose a ulimit on the task (necessary with java tasks)")
+        <*> switch (long "ignore-errors" <> help "ignore errors and generate the script")
         <*> switch (long "short-tasks" <> help "make tasks brief (no echo output of the task command)")
         <*> optional (strOption (long "preset" <> short 'p' <> helpDoc (Just (presetDoc pi))))
         <*> switch (long "version" <> short 'v' <> help "Display version and exit")
