@@ -130,6 +130,14 @@ $ echo "my_8core_memoryhog.sh" | slurmtasks --preset 8core --mem 100
 
 Presets can be combined by using a comma-separated list of presets. Settings will be applied from left to right, successively overriding previous presets' settings. For instance `--preset log,8core` will output to the `logs/` directory and allocate an 8core job.
 
+### Defaults
+
+The default settings have been originally hard-coded for LiSC. You may change the default behavior by adding a special preset called `default` to your `$HOME/.config/slurm-utils/slurmtasks.yml` file.  For example, the SCU default settings are:
+
+```
+default: --partition panda --time 100:00:00  --shell "/bin/bash -l"
+```
+
 ### Error checking
 
 Additionally, `slurmtasks` will check for the existence of the specified output and working directories, to protect against submitting a job which cannot be run:
