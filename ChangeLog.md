@@ -2,6 +2,10 @@
 
 ## Unreleased changes
 
+## 0.2.5.6
+
+- changing interface for group-by to lines-per-task for clarity
+
 ## 0.2.5.5
 
 - fix priority for default, parsed and preset options
